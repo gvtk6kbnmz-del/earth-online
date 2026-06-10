@@ -3019,29 +3019,43 @@ document.getElementById('btnReroll').addEventListener('click', () => {
     return;
   }
 
+  // 防止动画期间重复点击
+  if (heroCard.dataset.flipping === 'true') return;
+  heroCard.dataset.flipping = 'true';
+
   appState.rerollCount = (appState.rerollCount || 0) + 1;
   saveState(appState);
 
-  // 翻转动画
-  heroCard.classList.add('shuffling-out');
-  setTimeout(() => {
-    const newTask = rerollTask();
-    // 先用内联样式锁死 opacity:0，防止移除 animation class 后弹回可见状态
-    heroCard.style.opacity = '0';
-    heroCard.classList.remove('shuffling-out');
+  const newTask = rerollTask();
+
+  // 第一阶段：旧任务翻出 0° → 90°，到边缘不可见
+  const flipOut = heroCard.animate([
+    { transform: 'rotateY(0deg)' },
+    { transform: 'rotateY(90deg)' }
+  ], {
+    duration: 200,
+    easing: 'ease-in',
+    fill: 'forwards'
+  });
+
+  flipOut.onfinish = () => {
+    // 在90度边缘替换内容 — 用户看不到
     renderTask(newTask);
-    void heroCard.offsetWidth;
-    // Web Animations API 帧精确启动入场，无缝衔接
-    const anim = heroCard.animate([
-      { opacity: 0, transform: 'rotateY(-90deg) scale(0.92)' },
-      { opacity: 1, transform: 'rotateY(0deg) scale(1)' }
+
+    // 第二阶段：新任务翻入 90° → 0°
+    const flipIn = heroCard.animate([
+      { transform: 'rotateY(90deg)' },
+      { transform: 'rotateY(0deg)' }
     ], {
-      duration: 350,
-      easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+      duration: 200,
+      easing: 'ease-out',
       fill: 'forwards'
     });
-    anim.onfinish = () => { heroCard.style.opacity = ''; };
-  }, 300);
+
+    flipIn.onfinish = () => {
+      heroCard.dataset.flipping = '';
+    };
+  };
 });
 
 // ---- 分享 ----
