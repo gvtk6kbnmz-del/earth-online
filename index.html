@@ -2386,7 +2386,15 @@ button:active {
           <span class="toggle-slider"></span>
         </label>
       </div>
-      <div class="setting-hint">开启后在首页展示迷你月历和生命进度条</div>
+      <div class="setting-hint">开启后在首页展示迷你月历</div>
+      <div class="setting-row">
+        <span class="setting-label">显示进度条</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="lifeProgressToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="setting-hint">开启后在生命日历下方显示「已生活 X 天 · 进度 X% · 约 X 天剩余」</div>
       <!-- Life Widget 预览 -->
       <div class="life-widget" id="settingsLifeWidget">
         <div class="lw-header">
@@ -2673,7 +2681,8 @@ const DEFAULT_STATE = {
   exploredLocations: [],  // ['tokyo', 'paris', ...]
   lastExploredDate: null,
   birthDate: null,         // 'YYYY-MM-DD' 用户出生日期
-  lifeWidgetVisible: true, // 首页是否显示生命日历
+  lifeWidgetVisible: true,     // 首页是否显示生命日历
+  lifeProgressVisible: true,  // 首页是否显示生命进度条
   shareCount: 0,           // 分享次数
   rerollCount: 0,          // 换一换次数
   earthLogs: [],           // [{date, mood, note, type: 'auto'|'manual', timestamp}]
@@ -3535,6 +3544,7 @@ const settingsView = document.getElementById('settingsView');
 const homeLifeWidget = document.getElementById('homeLifeWidget');
 const birthDateInput = document.getElementById('birthDateInput');
 const lifeWidgetToggle = document.getElementById('lifeWidgetToggle');
+const lifeProgressToggle = document.getElementById('lifeProgressToggle');
 
 // ---- 显示/隐藏设置视图 ----
 function showSettingsView() {
@@ -3564,6 +3574,14 @@ function onLifeWidgetToggle() {
   renderLifeWidgetHome();
 }
 
+// ---- 生命进度条 开关 ----
+function onLifeProgressToggle() {
+  appState.lifeProgressVisible = lifeProgressToggle.checked;
+  saveState(appState);
+  renderLifeWidgetHome();
+  refreshSettingsUI();
+}
+
 // ---- 刷新设置页 UI ----
 function refreshSettingsUI() {
   // birth date input
@@ -3589,9 +3607,16 @@ function refreshSettingsUI() {
 
   // life widget toggle
   lifeWidgetToggle.checked = appState.lifeWidgetVisible;
+  lifeProgressToggle.checked = appState.lifeProgressVisible;
 
   // render calendars
   renderMiniCalendar('miniCalendarSettings', 'settingsLifeFill', 'settingsLifeText');
+
+  // 进度条预览开关
+  const settingsProgressEl = document.querySelector('#settingsLifeWidget .life-progress');
+  if (settingsProgressEl) {
+    settingsProgressEl.style.display = appState.lifeProgressVisible ? '' : 'none';
+  }
 }
 
 // ---- 渲染迷你月历 ----
@@ -3684,6 +3709,12 @@ function renderLifeWidgetHome() {
       document.getElementById('homeLevel').textContent = `Lv. ${age}`;
     }
     renderMiniCalendar('miniCalendarHome', 'lifeProgressFill', 'lifeProgressText');
+
+    // 进度条开关
+    const progressEl = homeLifeWidget.querySelector('.life-progress');
+    if (progressEl) {
+      progressEl.style.display = appState.lifeProgressVisible ? '' : 'none';
+    }
   } else {
     homeLifeWidget.style.display = 'none';
   }
@@ -3692,6 +3723,7 @@ function renderLifeWidgetHome() {
 // ---- 事件绑定 ----
 birthDateInput.addEventListener('change', onBirthDateChange);
 lifeWidgetToggle.addEventListener('change', onLifeWidgetToggle);
+lifeProgressToggle.addEventListener('change', onLifeProgressToggle);
 
 /* ============================================================
    10b. 统计页渲染
@@ -4083,6 +4115,7 @@ function init() {
     birthDateInput.value = appState.birthDate;
   }
   lifeWidgetToggle.checked = appState.lifeWidgetVisible;
+  lifeProgressToggle.checked = appState.lifeProgressVisible;
   refreshSettingsUI();
   renderLifeWidgetHome();
 }
