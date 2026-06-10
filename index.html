@@ -3026,12 +3026,21 @@ document.getElementById('btnReroll').addEventListener('click', () => {
   heroCard.classList.add('shuffling-out');
   setTimeout(() => {
     const newTask = rerollTask();
-    renderTask(newTask);
+    // 先用内联样式锁死 opacity:0，防止移除 animation class 后弹回可见状态
+    heroCard.style.opacity = '0';
     heroCard.classList.remove('shuffling-out');
-    // 强制重排确保浏览器同步处理 class 移除，避免中间帧闪出旧内容
+    renderTask(newTask);
     void heroCard.offsetWidth;
-    heroCard.classList.add('shuffling-in');
-    setTimeout(() => heroCard.classList.remove('shuffling-in'), 350);
+    // Web Animations API 帧精确启动入场，无缝衔接
+    const anim = heroCard.animate([
+      { opacity: 0, transform: 'rotateY(-90deg) scale(0.92)' },
+      { opacity: 1, transform: 'rotateY(0deg) scale(1)' }
+    ], {
+      duration: 350,
+      easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+      fill: 'forwards'
+    });
+    anim.onfinish = () => { heroCard.style.opacity = ''; };
   }, 300);
 });
 
