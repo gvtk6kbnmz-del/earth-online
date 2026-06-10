@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#0a0a0f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>地球Online · 每日随机挑战</title>
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -690,13 +693,13 @@ button:active {
 
 .nav-emoji {
   font-size: 16px;
-  opacity: 0.65;
-  filter: grayscale(0.2);
+  opacity: 0.35;
+  filter: grayscale(1);
   transition: opacity 0.3s ease, filter 0.3s ease;
 }
 .nav-item.active .nav-emoji {
-  opacity: 0.9;
-  filter: grayscale(0);
+  opacity: 0.8;
+  filter: grayscale(1) brightness(1.3);
 }
 .nav-item-label {
   font-size: 10px;
@@ -2657,11 +2660,8 @@ const TASK_POOL = [
   { title: '教一只鸟唱生日歌', desc: '它不唱也得装作它唱了', difficulty: 5 },
   { title: '对着一杯水讲一个笑话', desc: '如果水波纹动了，说明它笑了', difficulty: 1 },
   { title: '用勺子照镜子整理发型', desc: '勺面虽小，但诚意满满', difficulty: 1 },
-  { title: '倒着走路回家（注意安全）', desc: '换个角度看世界，同时防撞电线杆', difficulty: 3 },
   { title: '在浴室开一场个人演唱会', desc: '曲目不限，满分观众是花洒', difficulty: 1 },
   { title: '给玩偶盖好被子再出门', desc: '它一个人在家会冷', difficulty: 1 },
-  { title: '学鸭子走路穿过一个路口', desc: '要自信，鸭子不知道尴尬为何物', difficulty: 2 },
-  { title: '把快递盒叠成王座坐上去', desc: '每个纸箱都是未被加冕的王座', difficulty: 1 },
 ];
 
 const STORAGE_KEY = 'earth-online-state';
