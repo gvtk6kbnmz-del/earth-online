@@ -3028,11 +3028,10 @@ document.getElementById('btnReroll').addEventListener('click', () => {
     const newTask = rerollTask();
     renderTask(newTask);
     heroCard.classList.remove('shuffling-out');
-    // 用 rAF 让浏览器处理完 class 移除，再启动入场动画，消除卡顿
-    requestAnimationFrame(() => {
-      heroCard.classList.add('shuffling-in');
-      setTimeout(() => heroCard.classList.remove('shuffling-in'), 350);
-    });
+    // 强制重排确保浏览器同步处理 class 移除，避免中间帧闪出旧内容
+    void heroCard.offsetWidth;
+    heroCard.classList.add('shuffling-in');
+    setTimeout(() => heroCard.classList.remove('shuffling-in'), 350);
   }, 300);
 });
 
