@@ -3056,15 +3056,25 @@ function acceptTask() {
 }
 
 function rerollTask() {
-  // 在同一天内换任务，但不要重复出同样的任务
+  // 在同一天内换任务，避开所有已出现过的任务
   const seed = getDailySeed();
+  const seenKey = `task-seen-${today}`;
+  const seen = JSON.parse(localStorage.getItem(seenKey) || '[]');
+
   const currentTask = getCurrentTask();
+  if (!seen.includes(currentTask.index)) {
+    seen.push(currentTask.index);
+  }
+
   let offset = 1;
   let newIndex;
   do {
     newIndex = getDailyTaskIndex(seed, offset);
     offset++;
-  } while (newIndex === currentTask.index && offset < 50);
+  } while (seen.includes(newIndex) && offset < 200);
+
+  seen.push(newIndex);
+  localStorage.setItem(seenKey, JSON.stringify(seen));
 
   const overrideKey = `task-override-${today}`;
   localStorage.setItem(overrideKey, String(newIndex));
