@@ -1553,6 +1553,139 @@ button:active {
   box-shadow: 0 0 4px var(--color-success);
 }
 
+/* ---- 日历样式选择器 ---- */
+.calendar-style-options {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.cal-style-btn {
+  flex: 1;
+  padding: 12px 8px 10px;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.25s var(--ease-smooth);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-style-btn:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cal-style-btn.active {
+  border-color: var(--color-accent);
+  background: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.12);
+}
+
+.cal-style-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.cal-style-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.5px;
+}
+
+.cal-style-btn.active .cal-style-name {
+  color: var(--color-accent);
+}
+
+/* ---- 点阵日历 ---- */
+.dot-matrix-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.dot-matrix-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.dot-matrix-label {
+  font-size: 8px;
+  color: var(--color-text-tertiary);
+  width: 18px;
+  text-align: right;
+  margin-right: 4px;
+  flex-shrink: 0;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.dot-matrix-dots {
+  display: flex;
+  gap: 2px;
+  flex-wrap: nowrap;
+}
+
+.dot-matrix-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.dot-matrix-dot--past {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dot-matrix-dot--completed {
+  background: var(--color-accent);
+  box-shadow: 0 0 5px rgba(99, 102, 241, 0.4);
+}
+
+.dot-matrix-dot--today {
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  transform: scale(1.4);
+}
+
+.dot-matrix-dot--birthday {
+  background: #f59e0b;
+  box-shadow: 0 0 5px rgba(245, 158, 11, 0.5);
+}
+
+.dot-matrix-dot--today.dot-matrix-dot--birthday {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 12px rgba(255, 255, 255, 0.4);
+}
+
+/* ---- 年环日历 ---- */
+.ring-cal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 6px;
+  padding: 4px 0;
+}
+
+.ring-cal svg {
+  max-width: 220px;
+  width: 100%;
+  height: auto;
+}
+
+.ring-dot {
+  transition: r 0.2s ease, fill 0.2s ease;
+}
+
 /* ---- 生命进度条 ---- */
 .life-progress {
   margin-top: var(--space-md);
@@ -2411,6 +2544,26 @@ button:active {
       </div>
     </div>
 
+    <!-- 日历样式 -->
+    <div class="settings-section glass-card">
+      <div class="section-label">🎨 日历样式</div>
+      <div class="setting-hint">选择你喜欢的生命日历展示方式</div>
+      <div class="calendar-style-options">
+        <button class="cal-style-btn active" data-calstyle="monthly">
+          <span class="cal-style-icon">📅</span>
+          <span class="cal-style-name">月历</span>
+        </button>
+        <button class="cal-style-btn" data-calstyle="dotmatrix">
+          <span class="cal-style-icon">🔵</span>
+          <span class="cal-style-name">点阵</span>
+        </button>
+        <button class="cal-style-btn" data-calstyle="ring">
+          <span class="cal-style-icon">🔄</span>
+          <span class="cal-style-name">年环</span>
+        </button>
+      </div>
+    </div>
+
     <!-- 关于 -->
     <div class="settings-section glass-card">
       <div class="section-label">💡 关于</div>
@@ -2683,6 +2836,7 @@ const DEFAULT_STATE = {
   birthDate: null,         // 'YYYY-MM-DD' 用户出生日期
   lifeWidgetVisible: true,     // 首页是否显示生命日历
   lifeProgressVisible: true,  // 首页是否显示生命进度条
+  calendarStyle: 'monthly',   // 日历样式: 'monthly' | 'dotmatrix' | 'ring'
   shareCount: 0,           // 分享次数
   rerollCount: 0,          // 换一换次数
   earthLogs: [],           // [{date, mood, note, type: 'auto'|'manual', timestamp}]
@@ -3545,6 +3699,7 @@ const homeLifeWidget = document.getElementById('homeLifeWidget');
 const birthDateInput = document.getElementById('birthDateInput');
 const lifeWidgetToggle = document.getElementById('lifeWidgetToggle');
 const lifeProgressToggle = document.getElementById('lifeProgressToggle');
+const calStyleBtns = document.querySelectorAll('.cal-style-btn');
 
 // ---- 显示/隐藏设置视图 ----
 function showSettingsView() {
@@ -3582,6 +3737,18 @@ function onLifeProgressToggle() {
   refreshSettingsUI();
 }
 
+// ---- 日历样式选择 ----
+function onCalendarStyleChange(style) {
+  appState.calendarStyle = style;
+  saveState(appState);
+  // 更新按钮 active 状态
+  calStyleBtns.forEach(b => {
+    b.classList.toggle('active', b.dataset.calstyle === style);
+  });
+  renderLifeWidgetHome();
+  refreshSettingsUI();
+}
+
 // ---- 刷新设置页 UI ----
 function refreshSettingsUI() {
   // birth date input
@@ -3612,6 +3779,11 @@ function refreshSettingsUI() {
   // render calendars
   renderMiniCalendar('miniCalendarSettings', 'settingsLifeFill', 'settingsLifeText');
 
+  // 日历样式按钮 active 状态
+  calStyleBtns.forEach(b => {
+    b.classList.toggle('active', b.dataset.calstyle === appState.calendarStyle);
+  });
+
   // 进度条预览开关
   const settingsProgressEl = document.querySelector('#settingsLifeWidget .life-progress');
   if (settingsProgressEl) {
@@ -3626,68 +3798,43 @@ function renderMiniCalendar(containerId, fillId, textId) {
 
   const now = new Date();
   const year = now.getFullYear();
-  const month = now.getMonth(); // 0-indexed
+  const month = now.getMonth();
   const today = now.getDate();
 
-  const monthNames = ['一月','二月','三月','四月','五月','六月',
-                      '七月','八月','九月','十月','十一月','十二月'];
-  const dayNames = ['日','一','二','三','四','五','六'];
-
-  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  // 获取本月已完成挑战的日期集合
+  // 全年已完成挑战的日期集合 "M-D"
   const completedDays = new Set();
   appState.history.forEach(h => {
     if (h.status === 'done') {
       const [y, m, d] = h.date.split('-').map(Number);
-      if (y === year && m === month + 1) {
-        completedDays.add(d);
-      }
+      if (y === year) completedDays.add(`${m}-${d}`);
     }
   });
 
-  // 获取生日日（仅当月匹配时标记）
-  let birthdayDay = null;
+  // 生日
+  let birthdayM = null, birthdayD = null;
   if (appState.birthDate) {
-    const [by, bm, bd] = appState.birthDate.split('-').map(Number);
-    if (bm === month + 1) {
-      birthdayDay = bd;
-    }
+    const [, bm, bd] = appState.birthDate.split('-').map(Number);
+    birthdayM = bm; birthdayD = bd;
   }
 
-  // 渲染月历 header
-  let html = `<div class="mc-month-header">${year}年 ${monthNames[month]}</div>`;
-
-  // 星期头
-  html += '<div class="mc-grid">';
-  dayNames.forEach(d => {
-    html += `<div class="mc-day-name">${d}</div>`;
-  });
-
-  // 填充空白格
-  for (let i = 0; i < firstDay; i++) {
-    html += '<div class="mc-day mc-day--empty"></div>';
+  // 根据样式分发
+  switch (appState.calendarStyle) {
+    case 'dotmatrix':
+      renderDotMatrixCalendar(container, year, today, completedDays, birthdayM, birthdayD);
+      break;
+    case 'ring':
+      renderRingCalendar(container, year, month, today, completedDays, birthdayM, birthdayD);
+      break;
+    default:
+      renderMonthlyCalendar(container, year, month, today, completedDays, birthdayM, birthdayD);
   }
 
-  // 日期格
-  for (let d = 1; d <= daysInMonth; d++) {
-    let cls = 'mc-day';
-    if (d === today) cls += ' mc-day--today';
-    if (birthdayDay === d) cls += ' mc-day--birthday';
-    if (completedDays.has(d)) cls += ' mc-day--completed';
-    html += `<div class="${cls}">${d}</div>`;
-  }
-
-  html += '</div>';
-  container.innerHTML = html;
-
-  // 渲染生命进度条
+  // 生命进度条
   const birthDays = getBirthDays();
   if (fillId && textId && birthDays !== null) {
     const fill = document.getElementById(fillId);
     const text = document.getElementById(textId);
-    const avgLifespan = 29200; // 80年 ≈ 29200天
+    const avgLifespan = 29200;
     const pct = Math.min(100, Math.round((birthDays / avgLifespan) * 100));
     if (fill) fill.style.width = pct + '%';
     if (text) {
@@ -3698,6 +3845,124 @@ function renderMiniCalendar(containerId, fillId, textId) {
     const text = document.getElementById(textId);
     if (text) text.textContent = '设置出生日期后自动计算';
   }
+}
+
+// ---- 月历样式 ----
+function renderMonthlyCalendar(container, year, month, today, completedDays, birthdayM, birthdayD) {
+  const monthNames = ['一月','二月','三月','四月','五月','六月',
+                      '七月','八月','九月','十月','十一月','十二月'];
+  const dayNames = ['日','一','二','三','四','五','六'];
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  let html = `<div class="mc-month-header">${year}年 ${monthNames[month]}</div>`;
+  html += '<div class="mc-grid">';
+  dayNames.forEach(d => { html += `<div class="mc-day-name">${d}</div>`; });
+  for (let i = 0; i < firstDay; i++) { html += '<div class="mc-day mc-day--empty"></div>'; }
+  for (let d = 1; d <= daysInMonth; d++) {
+    let cls = 'mc-day';
+    if (d === today) cls += ' mc-day--today';
+    if (birthdayM === month + 1 && birthdayD === d) cls += ' mc-day--birthday';
+    if (completedDays.has(`${month + 1}-${d}`)) cls += ' mc-day--completed';
+    html += `<div class="${cls}">${d}</div>`;
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ---- 点阵样式 ----
+function renderDotMatrixCalendar(container, year, today, completedDays, birthdayM, birthdayD) {
+  const monthsShort = ['1月','2月','3月','4月','5月','6月',
+                       '7月','8月','9月','10月','11月','12月'];
+  const now = new Date();
+  const todayDOY = Math.floor((now - new Date(year, 0, 0)) / 86400000); // 今天是一年第几天
+
+  let html = '<div class="dot-matrix-cal">';
+  for (let m = 1; m <= 12; m++) {
+    const daysInMonth = new Date(year, m, 0).getDate();
+    html += '<div class="dot-matrix-row">';
+    html += `<span class="dot-matrix-label">${monthsShort[m - 1]}</span>`;
+    html += '<div class="dot-matrix-dots">';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const doy = new Date(year, m - 1, d);
+      const doyNum = Math.floor((doy - new Date(year, 0, 0)) / 86400000);
+      let cls = 'dot-matrix-dot';
+
+      // 未来天: 暗淡
+      // 已过去天: 亮色
+      // 已完成挑战: 强调色
+      // 今天: 高亮
+      // 生日: 金色
+      if (doyNum === todayDOY) {
+        cls += ' dot-matrix-dot--today';
+      }
+      if (birthdayM === m && birthdayD === d) {
+        cls += ' dot-matrix-dot--birthday';
+      }
+      if (completedDays.has(`${m}-${d}`)) {
+        cls += ' dot-matrix-dot--completed';
+      } else if (doyNum < todayDOY) {
+        cls += ' dot-matrix-dot--past';
+      }
+      html += `<span class="${cls}"></span>`;
+    }
+    html += '</div></div>';
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ---- 年环样式 ----
+function renderRingCalendar(container, year, month, today, completedDays, birthdayM, birthdayD) {
+  const daysInYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 366 : 365;
+  const now = new Date();
+  const todayDOY = Math.floor((now - new Date(year, 0, 0)) / 86400000);
+  const cx = 110, cy = 110, r = 90, dotR = 2.5;
+
+  let svg = `<svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">`;
+
+  // 极细的环作为参考线
+  svg += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>`;
+
+  for (let doy = 1; doy <= daysInYear; doy++) {
+    const angle = (doy / daysInYear) * Math.PI * 2 - Math.PI / 2; // 从12点方向开始
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+
+    // 计算这一天是几月几日
+    const date = new Date(year, 0, doy);
+    const dm = date.getMonth() + 1;
+    const dd = date.getDate();
+
+    let fill = 'rgba(255,255,255,0.04)'; // 未来
+    let r2 = dotR;
+
+    if (doy === todayDOY) {
+      fill = '#fff';
+      r2 = 3.8;
+    } else if (doy < todayDOY) {
+      fill = 'rgba(255,255,255,0.15)';
+    }
+    if (completedDays.has(`${dm}-${dd}`)) {
+      fill = '#818cf8';
+      r2 = doy === todayDOY ? 3.8 : 2.8;
+    }
+    if (birthdayM === dm && birthdayD === dd) {
+      fill = '#f59e0b';
+      r2 = doy === todayDOY ? 3.8 : 2.8;
+    }
+
+    svg += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r2}" fill="${fill}" class="ring-dot"/>`;
+  }
+
+  // 中心文字
+  svg += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">今天</text>`;
+  svg += `<text x="${cx}" y="${cy + 12}" text-anchor="middle" fill="#fff" font-size="16" font-weight="700">${todayDOY}</text>`;
+  svg += `<text x="${cx}" y="${cy + 24}" text-anchor="middle" fill="rgba(255,255,255,0.3)" font-size="8">/ ${daysInYear}</text>`;
+
+  svg += '</svg>';
+
+  container.innerHTML = `<div class="ring-cal">${svg}</div>`;
 }
 
 // ---- 首页 Life Widget ----
@@ -3724,6 +3989,9 @@ function renderLifeWidgetHome() {
 birthDateInput.addEventListener('change', onBirthDateChange);
 lifeWidgetToggle.addEventListener('change', onLifeWidgetToggle);
 lifeProgressToggle.addEventListener('change', onLifeProgressToggle);
+calStyleBtns.forEach(btn => {
+  btn.addEventListener('click', () => onCalendarStyleChange(btn.dataset.calstyle));
+});
 
 /* ============================================================
    10b. 统计页渲染
