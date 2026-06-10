@@ -1606,8 +1606,8 @@ button:active {
 .dot-matrix-cal {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-top: 6px;
+  gap: 1px;
+  margin-top: 2px;
 }
 
 .dot-matrix-row {
@@ -1629,13 +1629,14 @@ button:active {
 
 .dot-matrix-dots {
   display: flex;
-  gap: 2px;
+  gap: 1.5px;
   flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .dot-matrix-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.04);
   flex-shrink: 0;
@@ -1643,17 +1644,18 @@ button:active {
 }
 
 .dot-matrix-dot--past {
-  background: rgba(255, 255, 255, 0.12);
+  background: #fff;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.35);
 }
 
 .dot-matrix-dot--completed {
   background: var(--color-accent);
-  box-shadow: 0 0 5px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 5px rgba(99, 102, 241, 0.5);
 }
 
 .dot-matrix-dot--today {
   background: #fff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
   transform: scale(1.4);
 }
 
@@ -1665,6 +1667,22 @@ button:active {
 .dot-matrix-dot--today.dot-matrix-dot--birthday {
   background: #f59e0b;
   box-shadow: 0 0 8px rgba(245, 158, 11, 0.7), 0 0 12px rgba(255, 255, 255, 0.4);
+}
+
+/* iPhone 小屏适配 */
+@media (max-width: 400px) {
+  .dot-matrix-dot {
+    width: 6px;
+    height: 6px;
+  }
+  .dot-matrix-dots {
+    gap: 1px;
+  }
+  .dot-matrix-label {
+    width: 14px;
+    font-size: 7px;
+    margin-right: 2px;
+  }
 }
 
 /* ---- 年环日历 ---- */
@@ -3790,6 +3808,12 @@ function refreshSettingsUI() {
   if (settingsProgressEl) {
     settingsProgressEl.style.display = appState.lifeProgressVisible ? '' : 'none';
   }
+
+  // 点阵样式：隐藏预览标题栏
+  const settingsHeaderEl = document.querySelector('#settingsLifeWidget .lw-header');
+  if (settingsHeaderEl) {
+    settingsHeaderEl.style.display = (appState.calendarStyle === 'dotmatrix') ? 'none' : '';
+  }
 }
 
 // ---- 渲染迷你月历 ----
@@ -3980,6 +4004,12 @@ function renderLifeWidgetHome() {
     const progressEl = homeLifeWidget.querySelector('.life-progress');
     if (progressEl) {
       progressEl.style.display = appState.lifeProgressVisible ? '' : 'none';
+    }
+
+    // 点阵样式：隐藏标题栏，极简
+    const headerEl = homeLifeWidget.querySelector('.lw-header');
+    if (headerEl) {
+      headerEl.style.display = (appState.calendarStyle === 'dotmatrix') ? 'none' : '';
     }
   } else {
     homeLifeWidget.style.display = 'none';
