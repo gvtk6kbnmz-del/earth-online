@@ -688,6 +688,16 @@ button:active {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.nav-emoji {
+  font-size: 16px;
+  opacity: 0.65;
+  filter: grayscale(0.2);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+.nav-item.active .nav-emoji {
+  opacity: 0.9;
+  filter: grayscale(0);
+}
 .nav-item-label {
   font-size: 10px;
   font-weight: 600;
@@ -2264,22 +2274,28 @@ button:active {
 <!-- 底部导航 -->
 <nav class="bottom-nav" id="bottomNav">
   <button class="nav-item active" data-tab="home">
-            <span class=\"nav-item-label\">首页</span>
+    <span class="nav-emoji">🏠</span>
+    <span class="nav-item-label">首页</span>
   </button>
   <button class="nav-item" data-tab="explore">
-            <span class=\"nav-item-label\">探索</span>
+    <span class="nav-emoji">🌍</span>
+    <span class="nav-item-label">探索</span>
   </button>
   <button class="nav-item" data-tab="stats">
-            <span class=\"nav-item-label\">统计</span>
+    <span class="nav-emoji">📊</span>
+    <span class="nav-item-label">统计</span>
   </button>
   <button class="nav-item" data-tab="achievements">
-            <span class=\"nav-item-label\">成就</span>
+    <span class="nav-emoji">🏆</span>
+    <span class="nav-item-label">成就</span>
   </button>
   <button class="nav-item" data-tab="settings">
-            <span class=\"nav-item-label\">设置</span>
+    <span class="nav-emoji">⚙️</span>
+    <span class="nav-item-label">设置</span>
   </button>
   <button class="nav-item" data-tab="earthlog">
-            <span class=\"nav-item-label\">日志</span>
+    <span class="nav-emoji">📔</span>
+    <span class="nav-item-label">日志</span>
   </button>
 </nav>
 
@@ -2503,15 +2519,6 @@ button:active {
         <span class="log-form-date" id="logFormDate"></span>
         <span class="log-form-tag" id="logFormTag">今日日志</span>
       </div>
-      <div class="mood-selector" id="moodSelector">
-        <button class="mood-btn" data-mood="开心">开心</button>
-        <button class="mood-btn" data-mood="搞笑">搞笑</button>
-        <button class="mood-btn" data-mood="思考">思考</button>
-        <button class="mood-btn" data-mood="生气">生气</button>
-        <button class="mood-btn" data-mood="悲伤">悲伤</button>
-        <button class="mood-btn" data-mood="庆祝">庆祝</button>
-        <button class="mood-btn" data-mood="困倦">困倦</button>
-      </div>
       <textarea class="log-textarea" id="logTextarea" placeholder="记录今天的心情、见闻或想法…" maxlength="500"></textarea>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;position:relative;z-index:3;">
         <span style="font-size:10px;color:var(--color-text-tertiary);" id="logCharCount">0/500</span>
@@ -2538,24 +2545,24 @@ button:active {
    0. 全球任务地点数据
    ============================================================ */
 const WORLD_LOCATIONS = [
-  { id: 'tokyo',     name: '东京',   country: '日本',     lat: 35.6762,  lng: 139.6503, task: '在涩谷十字路口准时穿越一次',                   continent: 'asia',     difficulty: 2, funFact: '涩谷十字路口每分钟约有3000人通过' },
-  { id: 'beijing',   name: '北京',   country: '中国',     lat: 39.9042,  lng: 116.4074, task: '在故宫找到一只石狮子并合影',                     continent: 'asia',     difficulty: 2, funFact: '故宫有超过8700间房间' },
-  { id: 'bangkok',   name: '曼谷',   country: '泰国',     lat: 13.7563,  lng: 100.5018, task: '在街头买一份芒果糯米饭',                         continent: 'asia',     difficulty: 1, funFact: '曼谷全名是世界最长的城市名称，共168个字母' },
-  { id: 'dubai',     name: '迪拜',   country: '阿联酋',   lat: 25.2048,  lng: 55.2708,  task: '想象自己站在哈利法塔顶端俯瞰',                   continent: 'asia',     difficulty: 1, funFact: '哈利法塔高828米，是世界最高建筑' },
-  { id: 'paris',     name: '巴黎',   country: '法国',     lat: 48.8566,  lng: 2.3522,   task: '在埃菲尔铁塔前做一个优雅的姿势',                 continent: 'europe',   difficulty: 1, funFact: '埃菲尔铁塔每年会长高约15厘米（热胀冷缩）' },
-  { id: 'london',    name: '伦敦',   country: '英国',     lat: 51.5074,  lng: -0.1278,  task: '学一句地道的英式口音"Mind the gap"',              continent: 'europe',   difficulty: 1, funFact: '伦敦地铁是世界上最早的地下铁路系统' },
-  { id: 'rome',      name: '罗马',   country: '意大利',   lat: 41.9028,  lng: 12.4964,  task: '吃一口正宗的意大利面并发出"mmm"声',               continent: 'europe',   difficulty: 1, funFact: '罗马许愿池每天能收到约3000欧元的硬币' },
-  { id: 'moscow',    name: '莫斯科', country: '俄罗斯',   lat: 55.7558,  lng: 37.6173,  task: '在寒冷中喝一杯热巧克力并呼出白雾',               continent: 'europe',   difficulty: 2, funFact: '莫斯科地铁站被称作"地下宫殿"' },
-  { id: 'newyork',   name: '纽约',   country: '美国',     lat: 40.7128,  lng: -74.0060, task: '在中央公园喂一次鸽子',                           continent: 'americas', difficulty: 1, funFact: '纽约中央公园面积比摩纳哥公国还大' },
-  { id: 'rio',       name: '里约',   country: '巴西',     lat: -22.9068, lng: -43.1729, task: '对着基督像张开双臂拍一张',                       continent: 'americas', difficulty: 2, funFact: '里约基督救世主像高30米，臂展28米' },
-  { id: 'mexico',    name: '墨西哥城', country: '墨西哥', lat: 19.4326,  lng: -99.1332, task: '咬一口墨西哥卷饼并感叹"¡Qué rico!"',             continent: 'americas', difficulty: 1, funFact: '墨西哥城建立在古代特诺奇提特兰遗址之上' },
-  { id: 'cairo',     name: '开罗',   country: '埃及',     lat: 30.0444,  lng: 31.2357,  task: '想象自己骑着骆驼穿越金字塔',                     continent: 'africa',   difficulty: 3, funFact: '胡夫金字塔建成时，猛犸象还活着' },
-  { id: 'capetown',  name: '开普敦', country: '南非',     lat: -33.9249, lng: 18.4241,  task: '在桌山上拍一张云海照片',                         continent: 'africa',   difficulty: 3, funFact: '桌山是世界上最古老的山峰之一，已有2.6亿年' },
-  { id: 'sydney',    name: '悉尼',   country: '澳大利亚', lat: -33.8688, lng: 151.2093, task: '在歌剧院前跳一支袋鼠舞',                           continent: 'oceania',  difficulty: 2, funFact: '悉尼歌剧院的屋顶由超过100万块瓷砖铺成' },
-  { id: 'auckland',  name: '奥克兰', country: '新西兰',   lat: -36.8485, lng: 174.7633, task: '学一句毛利语"Kia Ora"并录下来',                continent: 'oceania',  difficulty: 2, funFact: '新西兰有3000万只羊，是人口的6倍' },
-  { id: 'reykjavik', name: '雷克雅未克', country: '冰岛', lat: 64.1466,  lng: -21.9426, task: '看一段极光视频并发出一声"哇"',                   continent: 'europe',   difficulty: 1, funFact: '冰岛有130多座火山，其中30座是活火山' },
-  { id: 'sahara',    name: '撒哈拉', country: '北非',     lat: 23.4162,  lng: 25.6628,  task: '在想象的沙漠中数三颗星星',                         continent: 'africa',   difficulty: 1, funFact: '撒哈拉沙漠的面积比整个美国还要大' },
-  { id: 'santiago',  name: '圣地亚哥', country: '智利',   lat: -33.4489, lng: -70.6693, task: '模仿复活节岛石像的表情坚持10秒',                   continent: 'americas', difficulty: 2, funFact: '复活节岛上有887尊摩艾石像' },
+  { id: 'tokyo',     name: '东京',   country: '日本',     emoji: '🗼', lat: 35.6762,  lng: 139.6503, task: '在涩谷十字路口准时穿越一次',                   continent: 'asia',     difficulty: 2, funFact: '涩谷十字路口每分钟约有3000人通过' },
+  { id: 'beijing',   name: '北京',   country: '中国',     emoji: '🏯', lat: 39.9042,  lng: 116.4074, task: '在故宫找到一只石狮子并合影',                     continent: 'asia',     difficulty: 2, funFact: '故宫有超过8700间房间' },
+  { id: 'bangkok',   name: '曼谷',   country: '泰国',     emoji: '🛕', lat: 13.7563,  lng: 100.5018, task: '在街头买一份芒果糯米饭',                         continent: 'asia',     difficulty: 1, funFact: '曼谷全名是世界最长的城市名称，共168个字母' },
+  { id: 'dubai',     name: '迪拜',   country: '阿联酋',   emoji: '🏙️', lat: 25.2048,  lng: 55.2708,  task: '想象自己站在哈利法塔顶端俯瞰',                   continent: 'asia',     difficulty: 1, funFact: '哈利法塔高828米，是世界最高建筑' },
+  { id: 'paris',     name: '巴黎',   country: '法国',     emoji: '🗼', lat: 48.8566,  lng: 2.3522,   task: '在埃菲尔铁塔前做一个优雅的姿势',                 continent: 'europe',   difficulty: 1, funFact: '埃菲尔铁塔每年会长高约15厘米（热胀冷缩）' },
+  { id: 'london',    name: '伦敦',   country: '英国',     emoji: '🎡', lat: 51.5074,  lng: -0.1278,  task: '学一句地道的英式口音"Mind the gap"',              continent: 'europe',   difficulty: 1, funFact: '伦敦地铁是世界上最早的地下铁路系统' },
+  { id: 'rome',      name: '罗马',   country: '意大利',   emoji: '🏛️', lat: 41.9028,  lng: 12.4964,  task: '吃一口正宗的意大利面并发出"mmm"声',               continent: 'europe',   difficulty: 1, funFact: '罗马许愿池每天能收到约3000欧元的硬币' },
+  { id: 'moscow',    name: '莫斯科', country: '俄罗斯',   emoji: '⛪', lat: 55.7558,  lng: 37.6173,  task: '在寒冷中喝一杯热巧克力并呼出白雾',               continent: 'europe',   difficulty: 2, funFact: '莫斯科地铁站被称作"地下宫殿"' },
+  { id: 'newyork',   name: '纽约',   country: '美国',     emoji: '🗽', lat: 40.7128,  lng: -74.0060, task: '在中央公园喂一次鸽子',                           continent: 'americas', difficulty: 1, funFact: '纽约中央公园面积比摩纳哥公国还大' },
+  { id: 'rio',       name: '里约',   country: '巴西',     emoji: '⛰️', lat: -22.9068, lng: -43.1729, task: '对着基督像张开双臂拍一张',                       continent: 'americas', difficulty: 2, funFact: '里约基督救世主像高30米，臂展28米' },
+  { id: 'mexico',    name: '墨西哥城', country: '墨西哥', emoji: '🌮', lat: 19.4326,  lng: -99.1332, task: '咬一口墨西哥卷饼并感叹"¡Qué rico!"',             continent: 'americas', difficulty: 1, funFact: '墨西哥城建立在古代特诺奇提特兰遗址之上' },
+  { id: 'cairo',     name: '开罗',   country: '埃及',     emoji: '🔺', lat: 30.0444,  lng: 31.2357,  task: '想象自己骑着骆驼穿越金字塔',                     continent: 'africa',   difficulty: 3, funFact: '胡夫金字塔建成时，猛犸象还活着' },
+  { id: 'capetown',  name: '开普敦', country: '南非',     emoji: '🦁', lat: -33.9249, lng: 18.4241,  task: '在桌山上拍一张云海照片',                         continent: 'africa',   difficulty: 3, funFact: '桌山是世界上最古老的山峰之一，已有2.6亿年' },
+  { id: 'sydney',    name: '悉尼',   country: '澳大利亚', emoji: '🦘', lat: -33.8688, lng: 151.2093, task: '在歌剧院前跳一支袋鼠舞',                           continent: 'oceania',  difficulty: 2, funFact: '悉尼歌剧院的屋顶由超过100万块瓷砖铺成' },
+  { id: 'auckland',  name: '奥克兰', country: '新西兰',   emoji: '🥝', lat: -36.8485, lng: 174.7633, task: '学一句毛利语"Kia Ora"并录下来',                continent: 'oceania',  difficulty: 2, funFact: '新西兰有3000万只羊，是人口的6倍' },
+  { id: 'reykjavik', name: '雷克雅未克', country: '冰岛', emoji: '🌋', lat: 64.1466,  lng: -21.9426, task: '看一段极光视频并发出一声"哇"',                   continent: 'europe',   difficulty: 1, funFact: '冰岛有130多座火山，其中30座是活火山' },
+  { id: 'sahara',    name: '撒哈拉', country: '北非',     emoji: '🏜️', lat: 23.4162,  lng: 25.6628,  task: '在想象的沙漠中数三颗星星',                         continent: 'africa',   difficulty: 1, funFact: '撒哈拉沙漠的面积比整个美国还要大' },
+  { id: 'santiago',  name: '圣地亚哥', country: '智利',   emoji: '🗿', lat: -33.4489, lng: -70.6693, task: '模仿复活节岛石像的表情坚持10秒',                   continent: 'americas', difficulty: 2, funFact: '复活节岛上有887尊摩艾石像' },
 ];
 
 // 成就徽章定义
@@ -3284,7 +3291,7 @@ function createMarkerIcon(location, isVisited, isFeatured) {
 
   return L.divIcon({
     className: '',
-    html: `<div class="${cssClass}">📍</div>`,
+    html: `<div class="${cssClass}">${location.emoji}</div>`,
     iconSize: isFeatured ? [38, 38] : [32, 32],
     iconAnchor: isFeatured ? [19, 19] : [16, 16],
     popupAnchor: [0, isFeatured ? -20 : -16],
@@ -3303,7 +3310,7 @@ function buildPopupContent(location, isVisited) {
 
   return `
     <div class="location-popup glass-card" style="border-radius:var(--radius-lg);">
-      <div class="lp-emoji">📍</div>
+      <div class="lp-emoji">${location.emoji}</div>
       <div class="lp-name">${location.name}</div>
       <div class="lp-country">${location.country}</div>
       <div class="lp-divider"></div>
@@ -3866,8 +3873,7 @@ function renderAchievementsPage() {
 const earthlogView = document.getElementById('earthlogView');
 const logTextarea = document.getElementById('logTextarea');
 const logSaveBtn = document.getElementById('logSaveBtn');
-const moodSelector = document.getElementById('moodSelector');
-let selectedMood = '开心';
+let selectedMood = '自动';  // 已移除心情选择器UI
 
 // ---- 显示/隐藏 ----
 function showEarthlogView() {
@@ -3880,14 +3886,6 @@ function hideEarthlogView() {
   earthlogView.style.display = 'none';
 }
 
-// ---- 心情选择 ----
-moodSelector.addEventListener('click', (e) => {
-  const btn = e.target.closest('.mood-btn');
-  if (!btn) return;
-  selectedMood = btn.dataset.mood;
-  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('mood-btn--selected'));
-  btn.classList.add('mood-btn--selected');
-});
 
 // ---- 字符计数 ----
 logTextarea.addEventListener('input', () => {
@@ -3907,7 +3905,7 @@ logSaveBtn.addEventListener('click', () => {
 
   const entry = {
     date: todayDate,
-    mood: selectedMood,
+    mood: '自动',
     note,
     type: 'manual',
     timestamp: Date.now(),
@@ -3963,22 +3961,17 @@ function renderEarthLog(animateFresh) {
   );
   if (todayManual && !animateFresh) {
     logTextarea.value = todayManual.note;
-    selectedMood = todayManual.mood;
+    selectedMood = '自动';
     document.getElementById('logCharCount').textContent = todayManual.note.length + '/500';
     document.getElementById('logFormTag').textContent = '✅ 已保存';
     document.getElementById('logFormTag').classList.add('log-form-tag--saved');
   } else if (!todayManual) {
     logTextarea.value = '';
-    selectedMood = '开心';
+    selectedMood = '自动';
     document.getElementById('logCharCount').textContent = '0/500';
     document.getElementById('logFormTag').textContent = '今日日志';
     document.getElementById('logFormTag').classList.remove('log-form-tag--saved');
   }
-
-  // 更新心情选择器
-  document.querySelectorAll('.mood-btn').forEach(b => {
-    b.classList.toggle('mood-btn--selected', b.dataset.mood === selectedMood);
-  });
 
   // 渲染时间线
   const timeline = document.getElementById('logTimeline');
@@ -4011,7 +4004,7 @@ function renderEarthLog(animateFresh) {
           ${typeBadge}
         </div>
         <div class="log-entry-body">
-          <span class="log-entry-mood">${l.mood}</span>
+          
           <span class="log-entry-text">${escapeHTML(l.note)}</span>
         </div>
       </div>`;
@@ -4033,7 +4026,7 @@ function autoLogTask(taskTitle) {
   );
   if (existing) return;
 
-  const mood = '自动';
+  const mood = '';
   const note = `完成今日挑战：${taskTitle}`;
 
   appState.earthLogs.unshift({
@@ -4067,9 +4060,6 @@ function init() {
   lifeWidgetToggle.checked = appState.lifeWidgetVisible;
   refreshSettingsUI();
   renderLifeWidgetHome();
-
-  // 初始化 Earth Log 默认心情
-  document.querySelector('.mood-btn[data-mood="开心"]')?.classList.add('mood-btn--selected');
 }
 
 init();
