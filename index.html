@@ -2561,7 +2561,7 @@ const WORLD_LOCATIONS = [
 // 成就徽章定义
 const ACHIEVEMENTS = [
   { id: 'first_task',    name: '初来乍到',   desc: '完成第一个任务',           icon: '🌱', rarity: 'common',    condition: (s) => s.totalCompleted >= 1 },
-  { id: 'first_explore', name: '迈出第一步', desc: '打卡第一个地点',           icon: 📍, rarity: 'common',    condition: (s) => (s.exploredLocations || []).length >= 1 },
+  { id: 'first_explore', name: '迈出第一步', desc: '打卡第一个地点',           icon: '📍', rarity: 'common',    condition: (s) => (s.exploredLocations || []).length >= 1 },
   { id: 'tasks_10',      name: '十全十美',   desc: '完成10个任务',             icon: '✅', rarity: 'common',    condition: (s) => s.totalCompleted >= 10 },
   { id: 'share_5',       name: '社交达人',   desc: '分享5次',                  icon: '📤', rarity: 'common',    condition: (s) => (s.shareCount || 0) >= 5 },
   { id: 'reroll_10',     name: '选择困难',   desc: '换过10次任务',             icon: '🎲', rarity: 'common',    condition: (s) => (s.rerollCount || 0) >= 10 },
