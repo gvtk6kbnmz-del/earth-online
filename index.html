@@ -3482,7 +3482,7 @@ window.addEventListener('resize', resizeConfettiCanvas);
    8. 3D 地球探索系统
    ============================================================ */
 let globeInitialized = false;
-let globeScene, globeCamera, globeRenderer, globeGroup, globeMesh, globeCloudGroup;
+let globeScene, globeCamera, globeRenderer, globeGroup;
 let globeMarkers = [];
 let globeAutoRotate = true;
 let globeDragging = false;
@@ -3491,6 +3491,16 @@ let globeVelocity = { x: 0, y: 0 };
 let globeZoom = 14;
 let globeTargetZoom = 14;
 const GLOBE_RADIUS = 3.75;
+
+// ---- 粒子地球 ----
+const PARTICLE_COUNT = 8000;
+const EXPLORE_RADIUS = 0.32;
+let particleSystem;       // THREE.Points
+let particleGeom;         // BufferGeometry
+let particleColors;       // Float32Array(length * 3)
+let particleLit;          // Float32Array(length) – 当前亮度 0..1
+let particleTargetLit;    // Float32Array(length) – 目标亮度
+let markerGroup;          // 点击标记容器
 
 const exploreView = document.getElementById('exploreView');
 const mapContainerEl = document.getElementById('mapContainer');
@@ -3528,7 +3538,87 @@ function getFeaturedLocation() {
   return WORLD_LOCATIONS[idx];
 }
 
-// ---- 初始化3D地球（Apple Maps / 高德地图写实风格）----
+// ---- 粒子发光纹理 ----
+function createGlowTexture() {
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 32;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.15, 'rgba(255,255,255,0.85)');
+  g.addColorStop(0.45, 'rgba(255,255,255,0.25)');
+  g.addColorStop(0.75, 'rgba(255,255,255,0.03)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 32, 32);
+  return new THREE.CanvasTexture(c);
+}
+
+// ---- 斐波那契球面分布 ----
+function fibonacciSphere(count, radius) {
+  const pts = new Float32Array(count * 3);
+  const phi = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < count; i++) {
+    const y = 1 - (i / (count - 1)) * 2;
+    const rAtY = Math.sqrt(1 - y * y);
+    const theta = phi * i;
+    pts[i * 3] = Math.cos(theta) * rAtY * radius;
+    pts[i * 3 + 1] = y * radius;
+    pts[i * 3 + 2] = Math.sin(theta) * rAtY * radius;
+  }
+  return pts;
+}
+
+// ---- 球面弧长距离 ----
+function arcDist3(ax, ay, az, bx, by, bz) {
+  const dot = (ax * bx + ay * by + az * bz) / (GLOBE_RADIUS * GLOBE_RADIUS);
+  return Math.acos(Math.max(-1, Math.min(1, dot))) * GLOBE_RADIUS;
+}
+
+// ---- 更新粒子目标亮度 ----
+function updateParticleTargets() {
+  const exploredSet = getExploredSet();
+  const locs = WORLD_LOCATIONS.filter(l => exploredSet.has(l.id));
+  if (locs.length === 0) {
+    particleTargetLit.fill(0);
+    return;
+  }
+  // 预计算已探索地点的 3D 坐标
+  const locVecs = locs.map(l => latLngToVec3(l.lat, l.lng, GLOBE_RADIUS));
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const px = particleGeom.attributes.position.array[i * 3];
+    const py = particleGeom.attributes.position.array[i * 3 + 1];
+    const pz = particleGeom.attributes.position.array[i * 3 + 2];
+    let minD = Infinity;
+    for (const v of locVecs) {
+      const d = arcDist3(px, py, pz, v.x, v.y, v.z);
+      if (d < minD) minD = d;
+    }
+    if (minD < EXPLORE_RADIUS) {
+      particleTargetLit[i] = Math.pow(1 - minD / EXPLORE_RADIUS, 0.55);
+    } else {
+      particleTargetLit[i] = 0;
+    }
+  }
+}
+
+// ---- 更新粒子顶点颜色 ----
+function applyParticleColors() {
+  const colorArr = particleGeom.attributes.color.array;
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const lit = particleLit[i];
+    // 未探索：暗蓝灰；已探索：亮蓝白
+    const r = 0.08 + lit * 0.75;
+    const g = 0.12 + lit * 0.68;
+    const b = 0.28 + lit * 0.62;
+    colorArr[i * 3] = r;
+    colorArr[i * 3 + 1] = g;
+    colorArr[i * 3 + 2] = b;
+  }
+  particleGeom.attributes.color.needsUpdate = true;
+}
+
+// ---- 初始化3D地球（粒子风格）----
 function initGlobe() {
   const container = mapContainerEl;
   const w = container.clientWidth;
@@ -3561,64 +3651,45 @@ function initGlobe() {
     starsVerts.push(r * Math.sin(p) * Math.cos(t), r * Math.sin(p) * Math.sin(t), r * Math.cos(p));
   }
   starsGeom.setAttribute('position', new THREE.Float32BufferAttribute(starsVerts, 3));
-  const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.04, transparent: true, opacity: 0.3 });
+  const starsMat = new THREE.PointsMaterial({ color: 0x334466, size: 0.03, transparent: true, opacity: 0.4 });
   globeScene.add(new THREE.Points(starsGeom, starsMat));
 
-  // ---- 纹理加载 ----
-  const loader = new THREE.TextureLoader();
-  const earthTex = loader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
-  earthTex.colorSpace = THREE.SRGBColorSpace;
-  const specularTex = loader.load('https://threejs.org/examples/textures/planets/earth_specular_2048.jpg');
-  const cloudTex = loader.load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png');
+  // ---- 粒子地球 ----
+  const glowTex = createGlowTexture();
+  const positions = fibonacciSphere(PARTICLE_COUNT, GLOBE_RADIUS);
 
-  // ---- 地球（Phong 材质 + specular map → 海洋反光）----
-  const earthGeom = new THREE.SphereGeometry(GLOBE_RADIUS, 64, 48);
-  const earthMat = new THREE.MeshPhongMaterial({
-    map: earthTex,
-    specularMap: specularTex,
-    specular: new THREE.Color(0x222233),
-    shininess: 12,
-  });
-  globeMesh = new THREE.Mesh(earthGeom, earthMat);
-  globeGroup.add(globeMesh);
+  particleGeom = new THREE.BufferGeometry();
+  particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-  // ---- 云层（半透明叠加，独立缓慢漂移）----
-  globeCloudGroup = new THREE.Group();
-  const cloudGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.04, 48, 36);
-  const cloudMat = new THREE.MeshBasicMaterial({
-    map: cloudTex,
-    transparent: true,
-    opacity: 0.22,
+  // 顶点颜色
+  particleColors = new Float32Array(PARTICLE_COUNT * 3);
+  particleGeom.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+
+  const particleMat = new THREE.PointsMaterial({
+    size: 0.045,
+    map: glowTex,
+    vertexColors: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
-    side: THREE.FrontSide,
-  });
-  globeCloudGroup.add(new THREE.Mesh(cloudGeom, cloudMat));
-  globeGroup.add(globeCloudGroup);
-
-  // ---- 大气光晕（Fresnel 散射，极淡蓝边）----
-  const glowGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.1, 48, 36);
-  const glowMat = new THREE.ShaderMaterial({
-    uniforms: {},
-    vertexShader: 'varying vec3 vN; void main(){ vN = normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-    fragmentShader: 'varying vec3 vN; void main(){ float f=1.0-abs(dot(vN,vec3(0,0,1))); float i=pow(f,3.5); gl_FragColor=vec4(0.32,0.60,0.92,i*0.15); }',
-    blending: THREE.AdditiveBlending,
-    side: THREE.FrontSide,
     transparent: true,
-    depthWrite: false,
+    opacity: 0.85,
   });
-  globeGroup.add(new THREE.Mesh(glowGeom, glowMat));
 
-  // ---- 光照（自然日光 + 微弱补光）----
-  globeScene.add(new THREE.AmbientLight(0x334466, 0.7));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-  sun.position.set(10, 5, 8);
-  globeScene.add(sun);
-  const rim = new THREE.DirectionalLight(0x8899cc, 0.4);
-  rim.position.set(-8, -2, -6);
-  globeScene.add(rim);
+  particleSystem = new THREE.Points(particleGeom, particleMat);
+  globeGroup.add(particleSystem);
 
-  // 地点标记
+  // 亮度状态
+  particleLit = new Float32Array(PARTICLE_COUNT);
+  particleTargetLit = new Float32Array(PARTICLE_COUNT);
+
+  // 初始状态
+  updateParticleTargets();
+  for (let i = 0; i < PARTICLE_COUNT; i++) particleLit[i] = particleTargetLit[i];
+  applyParticleColors();
+
+  // ---- 地点标记（点击目标 + 视觉指示）----
+  markerGroup = new THREE.Group();
+  globeGroup.add(markerGroup);
   renderGlobeMarkers();
 
   // 事件绑定
@@ -3653,14 +3724,9 @@ function initGlobe() {
       globeVelocity.y *= 0.94;
     }
 
-    // 自动旋转（惯性停止后才恢复）
+    // 自动旋转
     if (globeAutoRotate && !globeDragging && Math.abs(globeVelocity.x) < 0.0003 && Math.abs(globeVelocity.y) < 0.0003) {
       globeGroup.rotation.y += 0.0012;
-    }
-
-    // 云层缓慢漂移（相对地表）
-    if (globeCloudGroup) {
-      globeCloudGroup.rotation.y += 0.0001;
     }
 
     // 平滑缩放
@@ -3670,6 +3736,19 @@ function initGlobe() {
     } else if (zd !== 0) {
       globeCamera.position.z = globeTargetZoom;
     }
+
+    // 粒子亮度过渡
+    let colorDirty = false;
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      if (Math.abs(particleTargetLit[i] - particleLit[i]) > 0.005) {
+        particleLit[i] += (particleTargetLit[i] - particleLit[i]) * 0.08;
+        if (Math.abs(particleTargetLit[i] - particleLit[i]) < 0.006) {
+          particleLit[i] = particleTargetLit[i];
+        }
+        colorDirty = true;
+      }
+    }
+    if (colorDirty) applyParticleColors();
 
     // 今日推荐标记脉冲
     const t = Date.now() * 0.001;
@@ -3683,9 +3762,11 @@ function initGlobe() {
   globeInitialized = true;
 }
 
-// ---- 渲染地点标记（Apple Maps 风格：高亮小球 + 推荐光环）----
+// ---- 渲染地点标记（粒子地球上的定位点）----
 function renderGlobeMarkers() {
-  globeMarkers.forEach(m => globeGroup.remove(m.mesh));
+  while (markerGroup.children.length > 0) {
+    markerGroup.remove(markerGroup.children[0]);
+  }
   globeMarkers = [];
 
   const exploredSet = getExploredSet();
@@ -3694,37 +3775,33 @@ function renderGlobeMarkers() {
   WORLD_LOCATIONS.forEach(loc => {
     const isVisited = exploredSet.has(loc.id);
     const isFeatured = loc.id === featured.id;
-    const pos = latLngToVec3(loc.lat, loc.lng, GLOBE_RADIUS + 0.18);
+    const pos = latLngToVec3(loc.lat, loc.lng, GLOBE_RADIUS + 0.16);
 
-    const size = isFeatured ? 0.13 : 0.08;
-    const geom = new THREE.SphereGeometry(size, 14, 14);
+    const size = isFeatured ? 0.14 : 0.09;
+    const geom = new THREE.SphereGeometry(size, 12, 12);
 
     let color;
     if (isFeatured) color = 0xf59e0b;
     else if (isVisited) color = 0x34c759;
-    else color = 0x818cf8;
+    else color = 0x6366f1;
 
-    const mat = new THREE.MeshPhongMaterial({
-      color,
-      emissive: color,
-      emissiveIntensity: 0.35,
-      specular: 0xffffff,
-      shininess: 30,
-    });
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 });
 
     const dot = new THREE.Mesh(geom, mat);
     dot.position.copy(pos);
     dot.userData = { locationId: loc.id, isFeatured, isVisited };
 
-    if (isFeatured) {
-      const ringGeom = new THREE.TorusGeometry(size * 1.6, 0.018, 8, 24);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.7 });
+    // 光环（已探索或推荐）
+    if (isFeatured || isVisited) {
+      const ringGeom = new THREE.TorusGeometry(size * 1.7, 0.015, 6, 20);
+      const ringColor = isFeatured ? 0xf59e0b : 0x34c759;
+      const ringMat = new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity: 0.6 });
       const ring = new THREE.Mesh(ringGeom, ringMat);
       ring.position.set(0, 0, 0);
       dot.add(ring);
     }
 
-    globeGroup.add(dot);
+    markerGroup.add(dot);
     globeMarkers.push({ id: loc.id, mesh: dot, location: loc, isFeatured });
   });
 }
@@ -3835,11 +3912,22 @@ function checkInLocation(location) {
   appState.lastExploredDate = getToday();
   saveState(appState);
 
+  // 更新标记外观
   const marker = globeMarkers.find(m => m.id === location.id);
   if (marker && marker.mesh.material) {
     marker.mesh.material.color.set(0x34c759);
-    marker.mesh.material.emissive.set(0x34c759);
+    // 添加光环
+    const size = marker.isFeatured ? 0.14 : 0.09;
+    const ringGeom = new THREE.TorusGeometry(size * 1.7, 0.015, 6, 20);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x34c759, transparent: true, opacity: 0.6 });
+    const ring = new THREE.Mesh(ringGeom, ringMat);
+    ring.position.set(0, 0, 0);
+    marker.mesh.add(ring);
+    marker.isVisited = true;
   }
+
+  // 触发粒子点亮
+  updateParticleTargets();
 
   showCheckinToast(location);
 }
