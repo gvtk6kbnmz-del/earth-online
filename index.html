@@ -3542,7 +3542,7 @@ function initGlobe() {
 
   globeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   globeRenderer.setSize(w, h);
-  globeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  globeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   globeRenderer.domElement.className = 'globe-canvas';
   container.appendChild(globeRenderer.domElement);
 
@@ -3572,7 +3572,7 @@ function initGlobe() {
   const cloudTex = loader.load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png');
 
   // ---- 地球（Phong 材质 + specular map → 海洋反光）----
-  const earthGeom = new THREE.SphereGeometry(GLOBE_RADIUS, 80, 60);
+  const earthGeom = new THREE.SphereGeometry(GLOBE_RADIUS, 64, 48);
   const earthMat = new THREE.MeshPhongMaterial({
     map: earthTex,
     specularMap: specularTex,
@@ -3584,11 +3584,11 @@ function initGlobe() {
 
   // ---- 云层（半透明叠加，独立缓慢漂移）----
   globeCloudGroup = new THREE.Group();
-  const cloudGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.04, 72, 54);
-  const cloudMat = new THREE.MeshPhongMaterial({
+  const cloudGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.04, 48, 36);
+  const cloudMat = new THREE.MeshBasicMaterial({
     map: cloudTex,
     transparent: true,
-    opacity: 0.25,
+    opacity: 0.22,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     side: THREE.FrontSide,
@@ -3597,7 +3597,7 @@ function initGlobe() {
   globeGroup.add(globeCloudGroup);
 
   // ---- 大气光晕（Fresnel 散射，极淡蓝边）----
-  const glowGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.1, 72, 54);
+  const glowGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.1, 48, 36);
   const glowMat = new THREE.ShaderMaterial({
     uniforms: {},
     vertexShader: 'varying vec3 vN; void main(){ vN = normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
@@ -3697,7 +3697,7 @@ function renderGlobeMarkers() {
     const pos = latLngToVec3(loc.lat, loc.lng, GLOBE_RADIUS + 0.18);
 
     const size = isFeatured ? 0.13 : 0.08;
-    const geom = new THREE.SphereGeometry(size, 20, 20);
+    const geom = new THREE.SphereGeometry(size, 14, 14);
 
     let color;
     if (isFeatured) color = 0xf59e0b;
