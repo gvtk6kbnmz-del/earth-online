@@ -7,6 +7,32 @@
 - **部署**：GitHub Pages（`main` 分支 → 自动部署）
 - **无构建工具**：直接用原生 HTML/CSS/JS，零依赖框架
 
+## 技能套件优先级（Superpowers + gstack 共存规则）
+
+本项目同时安装了两套技能套件。为避免冲突，遵循以下优先级：
+
+### 主框架：gstack
+gstack 是默认工作流。以下场景使用 gstack：
+- 需求设计 → `spec` / `design-consultation`
+- 实现规划 → `autoplan` / `plan-tune`
+- 代码审查 → `review` / `devex-review`
+- QA 测试 → `qa` / `qa-only` / `browse`
+- 部署上线 → `land-and-deploy` / `ship`
+- 安全审计 → `cso`
+- 文档生成 → `document-generate` / `document-release`
+- 回顾复盘 → `retro` / `learn`
+
+### 补充：Superpowers（仅以下三个场景）
+Superpowers 只在 gstack 没有覆盖的领域介入：
+- **TDD** → `test-driven-development`（gstack 无内置 TDD 流程）
+- **Git Worktree 隔离** → `using-git-worktrees`（gstack 无内置 worktree）
+- **系统化调试** → `systematic-debugging`（先找根因再修，gstack 的 investigate 偏信息收集）
+
+### 冲突裁决
+- 任何 gstack 已覆盖的场景，**忽略 Superpowers 的同功能技能**
+- Superpowers 的 `brainstorming`、`writing-plans`、`requesting-code-review`、`verification-before-completion`、`finishing-a-development-branch` 等与 gstack 重叠的技能 **不使用**
+- 用户明确指令优先于所有技能套件
+
 ## 代码结构
 ```
 index.html
