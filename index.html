@@ -3492,15 +3492,19 @@ let globeZoom = 14;
 let globeTargetZoom = 14;
 const GLOBE_RADIUS = 3.75;
 
-// ---- 粒子地球 ----
-const PARTICLE_COUNT = 8000;
-const EXPLORE_RADIUS = 0.32;
-let particleSystem;       // THREE.Points
-let particleGeom;         // BufferGeometry
-let particleColors;       // Float32Array(length * 3)
-let particleLit;          // Float32Array(length) – 当前亮度 0..1
-let particleTargetLit;    // Float32Array(length) – 目标亮度
-let markerGroup;          // 点击标记容器
+// ---- 粒子地球（星尘风格）----
+const PARTICLE_COUNT = 10000;
+const DUST_COUNT = 2000;       // 外层飘散粒子
+const EXPLORE_RADIUS = 0.35;
+let particleSystem;            // THREE.Points（主球体）
+let dustSystem;                // THREE.Points（外层星尘光晕）
+let particleGeom;              // BufferGeometry
+let dustGeom;                  // BufferGeometry（外层）
+let particleColors;            // Float32Array(length * 3)
+let particleLit;               // Float32Array(length) – 当前亮度 0..1
+let particleTargetLit;         // Float32Array(length) – 目标亮度
+let particleBaseBrightness;    // Float32Array(length) – 基础亮度（波纹调制）
+let markerGroup;               // 点击标记容器
 
 const exploreView = document.getElementById('exploreView');
 const mapContainerEl = document.getElementById('mapContainer');
@@ -3538,49 +3542,80 @@ function getFeaturedLocation() {
   return WORLD_LOCATIONS[idx];
 }
 
-// ---- 粒子发光纹理 ----
+// ---- 粒子发光纹理（柔光风格）----
 function createGlowTexture() {
   const c = document.createElement('canvas');
-  c.width = 32; c.height = 32;
+  c.width = 64; c.height = 64;
   const ctx = c.getContext('2d');
-  const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
   g.addColorStop(0, 'rgba(255,255,255,1)');
-  g.addColorStop(0.15, 'rgba(255,255,255,0.85)');
-  g.addColorStop(0.45, 'rgba(255,255,255,0.25)');
-  g.addColorStop(0.75, 'rgba(255,255,255,0.03)');
+  g.addColorStop(0.08, 'rgba(255,255,255,0.92)');
+  g.addColorStop(0.2, 'rgba(255,255,255,0.65)');
+  g.addColorStop(0.4, 'rgba(255,255,255,0.22)');
+  g.addColorStop(0.65, 'rgba(255,255,255,0.04)');
   g.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 32, 32);
+  ctx.fillRect(0, 0, 64, 64);
   return new THREE.CanvasTexture(c);
 }
 
-// ---- 斐波那契球面分布 ----
-function fibonacciSphere(count, radius) {
+// ---- 星尘球面分布（径向散射 + 波纹调制）----
+function dustSphere(count, radius) {
   const pts = new Float32Array(count * 3);
   const phi = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < count; i++) {
     const y = 1 - (i / (count - 1)) * 2;
     const rAtY = Math.sqrt(1 - y * y);
     const theta = phi * i;
-    pts[i * 3] = Math.cos(theta) * rAtY * radius;
-    pts[i * 3 + 1] = y * radius;
-    pts[i * 3 + 2] = Math.sin(theta) * rAtY * radius;
+    const nx = Math.cos(theta) * rAtY;
+    const ny = y;
+    const nz = Math.sin(theta) * rAtY;
+    // 径向散射：大部分粒子在球面附近，少数向外飘散
+    const scatterRand = Math.random();
+    let offset;
+    if (scatterRand < 0.65) {
+      // 65% 核心密集：紧贴球面微弱抖动
+      offset = (Math.random() - 0.5) * 0.06;
+    } else if (scatterRand < 0.88) {
+      // 23% 过渡区：轻微向外散射
+      offset = (Math.random() - 0.2) * 0.18;
+    } else {
+      // 12% 外层飘散：像被风吹散的灰尘
+      offset = Math.random() * 0.38;
+    }
+    // 波纹调制：在球面上形成涟漪状的密度变化
+    const lat = Math.asin(Math.max(-1, Math.min(1, ny)));
+    const ripple = Math.sin(lat * 14) * Math.cos(theta * 10) * 0.045
+                 + Math.sin(theta * 7 + lat * 3) * 0.025;
+    offset += ripple;
+    const r = radius + offset;
+    pts[i * 3] = nx * r;
+    pts[i * 3 + 1] = ny * r;
+    pts[i * 3 + 2] = nz * r;
   }
   return pts;
 }
 
-// ---- 球面弧长距离 ----
+// ---- 球面弧长距离（归一化到球面）----
 function arcDist3(ax, ay, az, bx, by, bz) {
-  const dot = (ax * bx + ay * by + az * bz) / (GLOBE_RADIUS * GLOBE_RADIUS);
+  // 将粒子位置归一化到球面半径
+  const aLen = Math.sqrt(ax * ax + ay * ay + az * az);
+  const bLen = Math.sqrt(bx * bx + by * by + bz * bz);
+  const nx1 = ax / aLen, ny1 = ay / aLen, nz1 = az / aLen;
+  const nx2 = bx / bLen, ny2 = by / bLen, nz2 = bz / bLen;
+  const dot = nx1 * nx2 + ny1 * ny2 + nz1 * nz2;
   return Math.acos(Math.max(-1, Math.min(1, dot))) * GLOBE_RADIUS;
 }
 
-// ---- 更新粒子目标亮度 ----
+// ---- 更新粒子目标亮度（探索点亮）----
 function updateParticleTargets() {
   const exploredSet = getExploredSet();
   const locs = WORLD_LOCATIONS.filter(l => exploredSet.has(l.id));
   if (locs.length === 0) {
-    particleTargetLit.fill(0);
+    // 没有探索记录：全部回到基础亮度
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particleTargetLit[i] = particleBaseBrightness[i];
+    }
     return;
   }
   // 预计算已探索地点的 3D 坐标
@@ -3595,22 +3630,25 @@ function updateParticleTargets() {
       if (d < minD) minD = d;
     }
     if (minD < EXPLORE_RADIUS) {
-      particleTargetLit[i] = Math.pow(1 - minD / EXPLORE_RADIUS, 0.55);
+      const exploreBright = Math.pow(1 - minD / EXPLORE_RADIUS, 0.5);
+      // 探索亮度 + 基础波纹亮度，取最大值
+      particleTargetLit[i] = Math.max(particleBaseBrightness[i], exploreBright);
     } else {
-      particleTargetLit[i] = 0;
+      particleTargetLit[i] = particleBaseBrightness[i];
     }
   }
 }
 
-// ---- 更新粒子顶点颜色 ----
+// ---- 更新粒子顶点颜色（科技蓝青色系）----
 function applyParticleColors() {
   const colorArr = particleGeom.attributes.color.array;
   for (let i = 0; i < PARTICLE_COUNT; i++) {
     const lit = particleLit[i];
-    // 未探索：暗蓝灰；已探索：亮蓝白
-    const r = 0.08 + lit * 0.75;
-    const g = 0.12 + lit * 0.68;
-    const b = 0.28 + lit * 0.62;
+    // 基础态：深蓝紫 → 探索态：亮青白
+    // 使用更丰富的颜色渐变，带一点紫调增强科技感
+    const r = 0.06 + lit * 0.72;
+    const g = 0.10 + lit * 0.74;
+    const b = 0.22 + lit * 0.73;
     colorArr[i * 3] = r;
     colorArr[i * 3 + 1] = g;
     colorArr[i * 3 + 2] = b;
@@ -3618,7 +3656,7 @@ function applyParticleColors() {
   particleGeom.attributes.color.needsUpdate = true;
 }
 
-// ---- 初始化3D地球（粒子风格）----
+// ---- 初始化3D地球（星尘风格）----
 function initGlobe() {
   const container = mapContainerEl;
   const w = container.clientWidth;
@@ -3654,9 +3692,9 @@ function initGlobe() {
   const starsMat = new THREE.PointsMaterial({ color: 0x334466, size: 0.03, transparent: true, opacity: 0.4 });
   globeScene.add(new THREE.Points(starsGeom, starsMat));
 
-  // ---- 粒子地球 ----
+  // ---- 星尘粒子地球 ----
   const glowTex = createGlowTexture();
-  const positions = fibonacciSphere(PARTICLE_COUNT, GLOBE_RADIUS);
+  const positions = dustSphere(PARTICLE_COUNT, GLOBE_RADIUS);
 
   particleGeom = new THREE.BufferGeometry();
   particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -3666,13 +3704,13 @@ function initGlobe() {
   particleGeom.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
 
   const particleMat = new THREE.PointsMaterial({
-    size: 0.045,
+    size: 0.048,
     map: glowTex,
     vertexColors: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     transparent: true,
-    opacity: 0.85,
+    opacity: 0.82,
   });
 
   particleSystem = new THREE.Points(particleGeom, particleMat);
@@ -3681,11 +3719,56 @@ function initGlobe() {
   // 亮度状态
   particleLit = new Float32Array(PARTICLE_COUNT);
   particleTargetLit = new Float32Array(PARTICLE_COUNT);
+  particleBaseBrightness = new Float32Array(PARTICLE_COUNT);
+
+  // 计算基础波纹亮度（为每个粒子预设微弱的波纹亮度）
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const px = positions[i * 3];
+    const py = positions[i * 3 + 1];
+    const pz = positions[i * 3 + 2];
+    const len = Math.sqrt(px * px + py * py + pz * pz);
+    const ny = py / len;
+    const nx = px / len;
+    const nz = pz / len;
+    const lat = Math.asin(Math.max(-1, Math.min(1, ny)));
+    const theta = Math.atan2(nz, nx);
+    // 微弱的波纹亮度，让未探索的球体也有层次感
+    const ripple = Math.sin(lat * 14) * Math.cos(theta * 10) * 0.04
+                 + Math.sin(theta * 7 + lat * 3) * 0.03
+                 + 0.04;
+    particleBaseBrightness[i] = Math.max(0.015, ripple);
+  }
 
   // 初始状态
   updateParticleTargets();
   for (let i = 0; i < PARTICLE_COUNT; i++) particleLit[i] = particleTargetLit[i];
   applyParticleColors();
+
+  // ---- 外层星尘光晕（独立的飘散粒子层）----
+  const dustPositions = dustSphere(DUST_COUNT, GLOBE_RADIUS + 0.25);
+  dustGeom = new THREE.BufferGeometry();
+  dustGeom.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+  // 外层星尘颜色：淡蓝紫
+  const dustColors = new Float32Array(DUST_COUNT * 3);
+  for (let i = 0; i < DUST_COUNT; i++) {
+    const dist = Math.random();
+    const alpha = 0.15 + dist * 0.25;
+    dustColors[i * 3] = 0.18 * alpha;
+    dustColors[i * 3 + 1] = 0.22 * alpha;
+    dustColors[i * 3 + 2] = 0.45 * alpha;
+  }
+  dustGeom.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
+  const dustMat = new THREE.PointsMaterial({
+    size: 0.055,
+    map: glowTex,
+    vertexColors: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0.55,
+  });
+  dustSystem = new THREE.Points(dustGeom, dustMat);
+  globeGroup.add(dustSystem);
 
   // ---- 地点标记（点击目标 + 视觉指示）----
   markerGroup = new THREE.Group();
