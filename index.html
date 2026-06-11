@@ -3537,7 +3537,7 @@ function initGlobe() {
   globeScene = new THREE.Scene();
 
   globeCamera = new THREE.PerspectiveCamera(40, w / h, 0.5, 60);
-  globeCamera.position.set(0, 2, globeZoom);
+  globeCamera.position.set(0, -0.2, globeZoom);
   globeTargetZoom = globeZoom;
 
   globeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
