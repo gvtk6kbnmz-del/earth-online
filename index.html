@@ -10,8 +10,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>地球Online · 每日随机挑战</title>
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<!-- Three.js 3D 地球 -->
 <style>
 /* ============================================================
    1. CSS 变量
@@ -1011,107 +1010,111 @@ button:active {
   z-index: 1;
 }
 
-/* Leaflet 深色主题覆盖 */
-.leaflet-container {
-  background: var(--color-bg) !important;
-  font-family: var(--font-system) !important;
+/* 3D 地球画布 */
+.globe-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
 }
 
-/* 缩放控件和归属文字均隐藏 */
-.leaflet-control-zoom { display: none !important; }
-.leaflet-control-attribution { display: none !important; }
+.globe-canvas:active {
+  cursor: grabbing;
+}
 
-/* 自定义标记 */
-.custom-marker {
-  width: 32px;
-  height: 32px;
+/* 探索页返回按钮 */
+.explore-back-btn {
+  position: absolute;
+  top: var(--safe-top);
+  left: 16px;
+  z-index: 60;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
+  background: rgba(22, 22, 32, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  cursor: pointer;
-  transition: transform 0.25s var(--ease-spring);
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+  transition: all 0.2s ease;
 }
 
-.custom-marker:hover {
-  transform: scale(1.3);
-  z-index: 999 !important;
+.explore-back-btn:hover {
+  background: rgba(30, 30, 44, 0.9);
+  border-color: rgba(255,255,255,0.16);
 }
 
-.custom-marker--unvisited {
-  background: rgba(99, 102, 241, 0.25);
-  border: 2px solid rgba(129, 140, 248, 0.6);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
-  animation: markerPulse 2.2s ease-in-out infinite;
+/* 探索页图例 */
+.explore-legend {
+  position: absolute;
+  bottom: 100px;
+  left: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
 }
 
-.custom-marker--visited {
-  background: rgba(52, 199, 89, 0.2);
-  border: 2px solid rgba(52, 199, 89, 0.6);
-  box-shadow: 0 0 8px rgba(52, 199, 89, 0.2);
+.explore-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.custom-marker--featured {
-  background: rgba(255, 149, 0, 0.3);
-  border: 3px solid rgba(255, 149, 0, 0.8);
-  box-shadow: 0 0 18px rgba(255, 149, 0, 0.6);
-  animation: featuredPulse 1.5s ease-in-out infinite;
-  width: 38px;
-  height: 38px;
-  font-size: 20px;
+.explore-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-@keyframes markerPulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.3); }
-  50% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); }
-}
-
-@keyframes featuredPulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(255, 149, 0, 0.4); transform: scale(1); }
-  50% { box-shadow: 0 0 28px rgba(255, 149, 0, 0.7); transform: scale(1.12); }
-}
-
-/* Leaflet 弹窗覆盖 */
-.leaflet-popup {
-  z-index: 2000;
-}
-
-.leaflet-popup-content-wrapper {
-  background: transparent !important;
-  border-radius: var(--radius-lg) !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  border: none !important;
-}
-
-.leaflet-popup-tip {
-  background: rgba(22, 22, 32, 0.92) !important;
-  box-shadow: none !important;
-}
-
-.leaflet-popup-close-button {
-  color: #fff !important;
-  font-size: 22px !important;
-  margin: 10px 12px 0 0 !important;
-  z-index: 10 !important;
-  font-weight: 400 !important;
-}
-
-.leaflet-popup-content {
-  margin: 0 !important;
-  font-family: var(--font-system) !important;
-  width: 280px !important;
-}
-
-.leaflet-popup-tip-container {
-  display: none;
-}
+.explore-legend-dot--unvisited { background: #818cf8; box-shadow: 0 0 6px rgba(129,140,248,0.5); }
+.explore-legend-dot--visited { background: #34c759; box-shadow: 0 0 6px rgba(52,199,89,0.5); }
+.explore-legend-dot--featured { background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.6); }
 
 /* 地点详情弹窗 */
 .location-popup-wrapper {
-  /* wrapper hidden - we use Leaflet popup instead */;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+}
+
+.lp-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.lp-close-btn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
 }
 
 .location-popup {
@@ -2482,12 +2485,23 @@ button:active {
 
 <!-- 地图探索视图 -->
 <div id="exploreView" class="explore-view" style="display:none;">
-  <!-- 地图容器 -->
+  <!-- 3D 地球容器 -->
   <div id="mapContainer" class="map-container"></div>
 
-  <!-- 地点详情弹窗（自定义 Leaflet 弹窗内容模板） -->
+  <!-- 返回按钮 -->
+  <button class="explore-back-btn" id="exploreBackBtn" title="返回">←</button>
+
+  <!-- 图例 -->
+  <div class="explore-legend">
+    <span><i class="explore-legend-dot explore-legend-dot--unvisited"></i> 未探索</span>
+    <span><i class="explore-legend-dot explore-legend-dot--visited"></i> 已探索</span>
+    <span><i class="explore-legend-dot explore-legend-dot--featured"></i> 今日推荐</span>
+  </div>
+
+  <!-- 地点详情弹窗 -->
   <div class="location-popup-wrapper" id="locationPopupWrapper" style="display:none;">
     <div class="location-popup glass-card" id="locationPopup">
+      <button class="lp-close-btn" id="lpCloseBtn">✕</button>
       <div class="lp-emoji" id="lpEmoji"></div>
       <div class="lp-name" id="lpName"></div>
       <div class="lp-country" id="lpCountry"></div>
@@ -2718,7 +2732,7 @@ button:active {
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" crossorigin=""></script>
 <script>
 /* ============================================================
    1. 常量 & 任务数据池
@@ -3465,16 +3479,34 @@ function stopConfetti() {
 window.addEventListener('resize', resizeConfettiCanvas);
 
 /* ============================================================
-   8. 地图探索系统
+   8. 3D 地球探索系统
    ============================================================ */
-let map = null;
-let mapInitialized = false;
-let locationMarkers = {};  // { id: L.marker }
+let globeInitialized = false;
+let globeScene, globeCamera, globeRenderer, globeGroup, globeMesh;
+let globeMarkers = [];
+let globeAutoRotate = true;
+let globeDragging = false;
+let globePrevPointer = { x: 0, y: 0 };
+let globeZoom = 14;
+const GLOBE_RADIUS = 5;
 
 const exploreView = document.getElementById('exploreView');
 const mapContainerEl = document.getElementById('mapContainer');
+const exploreBackBtn = document.getElementById('exploreBackBtn');
+const popupWrapper = document.getElementById('locationPopupWrapper');
 
-// ---- 探索辅助函数 ----
+// ---- 经纬度转3D坐标 ----
+function latLngToVec3(lat, lng, radius) {
+  const phi = (90 - lat) * Math.PI / 180;
+  const theta = lng * Math.PI / 180;
+  return new THREE.Vector3(
+    -radius * Math.sin(phi) * Math.cos(theta),
+    radius * Math.cos(phi),
+    radius * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
+// ---- 探索辅助 ----
 function getExploredSet() {
   return new Set(appState.exploredLocations || []);
 }
@@ -3494,147 +3526,250 @@ function getFeaturedLocation() {
   return WORLD_LOCATIONS[idx];
 }
 
-// ---- 自定义标记创建 ----
-function createMarkerIcon(location, isVisited, isFeatured) {
-  let cssClass = 'custom-marker';
-  if (isFeatured) {
-    cssClass += ' custom-marker--featured';
-  } else if (isVisited) {
-    cssClass += ' custom-marker--visited';
-  } else {
-    cssClass += ' custom-marker--unvisited';
+// ---- 初始化3D地球 ----
+function initGlobe() {
+  const container = mapContainerEl;
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+
+  globeScene = new THREE.Scene();
+
+  globeCamera = new THREE.PerspectiveCamera(40, w / h, 0.5, 60);
+  globeCamera.position.set(0, 2, globeZoom);
+
+  globeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  globeRenderer.setSize(w, h);
+  globeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  globeRenderer.domElement.className = 'globe-canvas';
+  container.appendChild(globeRenderer.domElement);
+
+  // Globe group（用于旋转）
+  globeGroup = new THREE.Group();
+  globeGroup.rotation.x = 0.3;
+  globeScene.add(globeGroup);
+
+  // 星空背景
+  const starsGeom = new THREE.BufferGeometry();
+  const starsVerts = [];
+  for (let i = 0; i < 2000; i++) {
+    const t = Math.random() * Math.PI * 2;
+    const p = Math.acos(2 * Math.random() - 1);
+    const r = 22 + Math.random() * 18;
+    starsVerts.push(r * Math.sin(p) * Math.cos(t), r * Math.sin(p) * Math.sin(t), r * Math.cos(p));
   }
+  starsGeom.setAttribute('position', new THREE.Float32BufferAttribute(starsVerts, 3));
+  const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.07, transparent: true, opacity: 0.6 });
+  globeScene.add(new THREE.Points(starsGeom, starsMat));
 
-  return L.divIcon({
-    className: '',
-    html: `<div class="${cssClass}">${location.emoji}</div>`,
-    iconSize: isFeatured ? [38, 38] : [32, 32],
-    iconAnchor: isFeatured ? [19, 19] : [16, 16],
-    popupAnchor: [0, isFeatured ? -20 : -16],
+  // 地球纹理
+  const earthGeom = new THREE.SphereGeometry(GLOBE_RADIUS, 72, 54);
+  const loader = new THREE.TextureLoader();
+  const earthTex = loader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+  const earthMat = new THREE.MeshStandardMaterial({ map: earthTex, roughness: 0.8, metalness: 0.05 });
+  globeMesh = new THREE.Mesh(earthGeom, earthMat);
+  globeGroup.add(globeMesh);
+
+  // 大气光晕
+  const glowGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.12, 72, 54);
+  const glowMat = new THREE.ShaderMaterial({
+    uniforms: {},
+    vertexShader: 'varying vec3 vN; void main(){ vN = normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader: 'varying vec3 vN; void main(){ float i=pow(0.65-dot(vN,vec3(0,0,1)),3.0); gl_FragColor=vec4(0.39,0.58,0.93,i*0.35); }',
+    blending: THREE.AdditiveBlending,
+    side: THREE.FrontSide,
+    transparent: true,
+    depthWrite: false,
   });
-}
+  globeGroup.add(new THREE.Mesh(glowGeom, glowMat));
 
-// ---- 弹窗内容 ----
-function buildPopupContent(location, isVisited) {
-  const statusText = isVisited
-    ? '<span style="color:#34c759;font-weight:700;">✅ 已探索</span>'
-    : '<span style="color:var(--color-text-tertiary);">📍 等待你的到来</span>';
+  // 光照
+  globeScene.add(new THREE.AmbientLight(0x334466, 1.2));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.8);
+  sun.position.set(10, 5, 8);
+  globeScene.add(sun);
+  const fill = new THREE.DirectionalLight(0x4466aa, 0.4);
+  fill.position.set(-5, -2, -4);
+  globeScene.add(fill);
 
-  const btnClass = isVisited ? 'lp-checkin-btn lp-checkin-btn--done' : 'lp-checkin-btn';
-  const btnText = isVisited ? '✅ 已打卡' : '✨ 打卡签到';
-  const disabledAttr = isVisited ? 'disabled style="pointer-events:none;"' : '';
+  // 地点标记
+  renderGlobeMarkers();
 
-  return `
-    <div class="location-popup glass-card" style="border-radius:var(--radius-lg);">
-      <div class="lp-emoji">${location.emoji}</div>
-      <div class="lp-name">${location.name}</div>
-      <div class="lp-country">${location.country}</div>
-      <div class="lp-divider"></div>
-      <div class="lp-task-label">📋 当地任务</div>
-      <div class="lp-task">${location.task}</div>
-      <div class="lp-funfact">💡 ${location.funFact}</div>
-      <div class="lp-divider"></div>
-      <button class="${btnClass}" data-location-id="${location.id}" ${disabledAttr}>${btnText}</button>
-      <p class="lp-checkin-status">${statusText}</p>
-    </div>
-  `;
-}
+  // 事件绑定
+  const cv = globeRenderer.domElement;
+  cv.addEventListener('pointerdown', onGlobeDown);
+  cv.addEventListener('pointermove', onGlobeMove);
+  cv.addEventListener('pointerup', onGlobeUp);
+  cv.addEventListener('pointerleave', onGlobeUp);
+  cv.addEventListener('wheel', onGlobeWheel, { passive: false });
+  cv.addEventListener('click', onGlobeClick);
 
-// ---- 初始化地图 ----
-function initMap() {
-  if (mapInitialized) return;
-
-  map = L.map(mapContainerEl, {
-    center: [20, 0],
-    zoom: 2,
-    minZoom: 2,
-    maxZoom: 10,
-    zoomControl: false,
-    attributionControl: false,
-    scrollWheelZoom: true,
-    worldCopyJump: true,
+  exploreBackBtn.addEventListener('click', () => {
+    hideExploreView();
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    const homeNav = document.querySelector('.nav-item[data-tab="home"]');
+    if (homeNav) homeNav.classList.add('active');
   });
+  document.getElementById('lpCloseBtn').addEventListener('click', hideLocationPopup);
+  popupWrapper.addEventListener('click', (e) => { if (e.target === popupWrapper) hideLocationPopup(); });
 
-  // ESRI Dark Gray Canvas — 原生深色地图，全球CDN，Retina清晰，无需API Key
-  L.tileLayer('https://server.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 10,
-    noWrap: false,
-    attribution: '&copy; Esri',
-  }).addTo(map);
+  window.addEventListener('resize', onGlobeResize);
 
-  // 叠加地名标注层，深色风格，文字清晰
-  L.tileLayer('https://server.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 10,
-    noWrap: false,
-  }).addTo(map);
+  // 动画循环
+  (function animate() {
+    requestAnimationFrame(animate);
+    if (globeAutoRotate && !globeDragging) {
+      globeGroup.rotation.y += 0.0015;
+    }
+    const t = Date.now() * 0.001;
+    globeMarkers.forEach(m => {
+      if (m.isFeatured) m.mesh.scale.setScalar(1 + Math.sin(t * 3) * 0.22);
+    });
+    globeRenderer.render(globeScene, globeCamera);
+  })();
 
-  renderAllMarkers();
-  setTimeout(() => { map.invalidateSize(); }, 200);
-  mapInitialized = true;
+  globeInitialized = true;
 }
 
-// ---- 渲染所有标记 ----
-function renderAllMarkers() {
-  if (!map) return;
-
-  Object.values(locationMarkers).forEach(m => map.removeLayer(m));
-  locationMarkers = {};
+// ---- 渲染地点标记 ----
+function renderGlobeMarkers() {
+  globeMarkers.forEach(m => globeGroup.remove(m.mesh));
+  globeMarkers = [];
 
   const exploredSet = getExploredSet();
   const featured = getFeaturedLocation();
 
-  // 将今日推荐地点排到最后渲染，确保它出现在其他标记上方
-  const sorted = [...WORLD_LOCATIONS].sort((a, b) => {
-    if (a.id === featured.id) return 1;
-    if (b.id === featured.id) return -1;
-    return 0;
-  });
-
-  sorted.forEach(loc => {
+  WORLD_LOCATIONS.forEach(loc => {
     const isVisited = exploredSet.has(loc.id);
-    const isFeatured = (loc.id === featured.id);
-    const icon = createMarkerIcon(loc, isVisited, isFeatured);
-    const marker = L.marker([loc.lat, loc.lng], {
-      icon,
-      zIndexOffset: isFeatured ? 100 : 0,
-    }).addTo(map);
-    marker.bindPopup(buildPopupContent(loc, isVisited), {
-      maxWidth: 300,
-      className: 'location-popup-container',
+    const isFeatured = loc.id === featured.id;
+    const pos = latLngToVec3(loc.lat, loc.lng, GLOBE_RADIUS + 0.2);
+
+    const size = isFeatured ? 0.18 : 0.11;
+    const geom = new THREE.SphereGeometry(size, 16, 16);
+
+    let color;
+    if (isFeatured) color = 0xf59e0b;
+    else if (isVisited) color = 0x34c759;
+    else color = 0x818cf8;
+
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      roughness: 0.3,
+      metalness: 0.1,
+      emissive: color,
+      emissiveIntensity: 0.6,
     });
 
-    marker.on('popupopen', () => {
-      setTimeout(() => {
-        const btn = document.querySelector(`.lp-checkin-btn[data-location-id="${loc.id}"]`);
-        if (btn && !btn.disabled) {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            checkInLocation(loc, marker);
-          });
-        }
-      }, 50);
-    });
+    const dot = new THREE.Mesh(geom, mat);
+    dot.position.copy(pos);
+    dot.userData = { locationId: loc.id, isFeatured, isVisited };
 
-    locationMarkers[loc.id] = marker;
+    if (isFeatured) {
+      const ringGeom = new THREE.TorusGeometry(size * 1.8, 0.03, 8, 16);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.7 });
+      const ring = new THREE.Mesh(ringGeom, ringMat);
+      ring.position.set(0, 0, 0);
+      dot.add(ring);
+    }
+
+    globeGroup.add(dot);
+    globeMarkers.push({ id: loc.id, mesh: dot, location: loc, isFeatured });
   });
 }
 
-// ---- 更新单个标记状态 ----
-function updateMarkerState(locationId) {
-  const marker = locationMarkers[locationId];
-  if (!marker) return;
-  const loc = WORLD_LOCATIONS.find(l => l.id === locationId);
-  if (!loc) return;
+// ---- 点击检测 ----
+function onGlobeClick(e) {
+  if (globeDragging) return;
+  const rect = globeRenderer.domElement.getBoundingClientRect();
+  const mouse = new THREE.Vector2(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1
+  );
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, globeCamera);
+  const hits = raycaster.intersectObjects(globeMarkers.map(m => m.mesh));
+  if (hits.length > 0) {
+    const obj = hits[0].object;
+    if (obj.userData.locationId) {
+      const loc = WORLD_LOCATIONS.find(l => l.id === obj.userData.locationId);
+      if (loc) showLocationPopup(loc, obj.userData.isVisited);
+    }
+  }
+}
 
-  const featured = getFeaturedLocation();
-  const isFeatured = (loc.id === featured.id);
-  const icon = createMarkerIcon(loc, true, isFeatured);
-  marker.setIcon(icon);
-  marker.setPopupContent(buildPopupContent(loc, true));
+// ---- 拖拽旋转 ----
+function onGlobeDown(e) {
+  globeDragging = true;
+  globeAutoRotate = false;
+  globePrevPointer.x = e.clientX;
+  globePrevPointer.y = e.clientY;
+}
+
+function onGlobeMove(e) {
+  if (!globeDragging) return;
+  globeGroup.rotation.y += (e.clientX - globePrevPointer.x) * 0.005;
+  globeGroup.rotation.x += (e.clientY - globePrevPointer.y) * 0.005;
+  globeGroup.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, globeGroup.rotation.x));
+  globePrevPointer.x = e.clientX;
+  globePrevPointer.y = e.clientY;
+}
+
+function onGlobeUp(e) {
+  globeDragging = false;
+  setTimeout(() => { globeAutoRotate = true; }, 2000);
+}
+
+function onGlobeWheel(e) {
+  e.preventDefault();
+  globeZoom += e.deltaY * 0.01;
+  globeZoom = Math.max(6, Math.min(30, globeZoom));
+  globeCamera.position.z = globeZoom;
+}
+
+function onGlobeResize() {
+  if (!globeRenderer) return;
+  const w = mapContainerEl.clientWidth;
+  const h = mapContainerEl.clientHeight;
+  globeRenderer.setSize(w, h);
+  globeCamera.aspect = w / h;
+  globeCamera.updateProjectionMatrix();
+}
+
+// ---- 弹窗 ----
+function showLocationPopup(location, isVisited) {
+  document.getElementById('lpEmoji').textContent = location.emoji;
+  document.getElementById('lpName').textContent = location.name;
+  document.getElementById('lpCountry').textContent = location.country;
+  document.getElementById('lpTask').textContent = location.task;
+  document.getElementById('lpFunFact').textContent = '💡 ' + location.funFact;
+
+  const btn = document.getElementById('lpCheckinBtn');
+  const status = document.getElementById('lpCheckinStatus');
+
+  if (isVisited) {
+    btn.textContent = '✅ 已打卡';
+    btn.className = 'lp-checkin-btn lp-checkin-btn--done';
+    btn.disabled = true;
+    status.innerHTML = '<span style="color:#34c759;font-weight:700;">✅ 已探索</span>';
+  } else {
+    btn.textContent = '✨ 打卡签到';
+    btn.className = 'lp-checkin-btn';
+    btn.disabled = false;
+    status.innerHTML = '<span style="color:var(--color-text-tertiary);">📍 等待你的到来</span>';
+  }
+
+  btn.onclick = () => {
+    if (!isVisited) { checkInLocation(location); hideLocationPopup(); }
+  };
+
+  popupWrapper.style.display = 'flex';
+}
+
+function hideLocationPopup() {
+  popupWrapper.style.display = 'none';
 }
 
 // ---- 打卡签到 ----
-function checkInLocation(location, marker) {
+function checkInLocation(location) {
   const exploredSet = getExploredSet();
   if (exploredSet.has(location.id)) return;
 
@@ -3642,49 +3777,20 @@ function checkInLocation(location, marker) {
   appState.lastExploredDate = getToday();
   saveState(appState);
 
-  updateMarkerState(location.id);
-  triggerCheckinRipple(marker);
+  const marker = globeMarkers.find(m => m.id === location.id);
+  if (marker && marker.mesh.material) {
+    marker.mesh.material.color.set(0x34c759);
+    marker.mesh.material.emissive.set(0x34c759);
+  }
+
   showCheckinToast(location);
 }
 
-// ---- 打卡涟漪动画 ----
-function triggerCheckinRipple(marker) {
-  const pos = map.latLngToContainerPoint(marker.getLatLng());
-  const ripple = document.createElement('div');
-  ripple.className = 'checkin-ripple';
-  ripple.style.left = pos.x + 'px';
-  ripple.style.top = pos.y + 'px';
-  mapContainerEl.appendChild(ripple);
-  ripple.addEventListener('animationend', () => ripple.remove());
-}
-
-// ---- 打卡成功提示 ----
+// ---- 打卡提示 ----
 function showCheckinToast(location) {
   const toast = document.createElement('div');
-  toast.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    z-index: 3000;
-    background: rgba(30, 30, 45, 0.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    border-radius: 20px;
-    padding: 20px 28px;
-    text-align: center;
-    font-family: var(--font-system);
-    color: var(--color-text);
-    pointer-events: none;
-    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
-    transition: transform 0.35s var(--ease-spring);
-  `;
-  toast.innerHTML = `
-    <div style="font-size:40px;margin-bottom:8px;">📍</div>
-    <div style="font-size:17px;font-weight:700;">📍 ${location.name} 打卡成功！</div>
-    <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;">探索进度 +1</div>
-  `;
+  toast.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);z-index:3000;background:rgba(30,30,45,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(99,102,241,0.3);border-radius:16px;padding:20px 28px;text-align:center;color:#fff;font-size:15px;font-weight:600;pointer-events:none;';
+  toast.innerHTML = '<div style="font-size:32px;margin-bottom:6px;">' + location.emoji + '</div><div style="font-size:17px;font-weight:700;">📍 ' + location.name + ' 打卡成功！</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;">探索进度 +1</div>';
   document.body.appendChild(toast);
 
   requestAnimationFrame(() => {
@@ -3699,21 +3805,18 @@ function showCheckinToast(location) {
   }, 1800);
 }
 
-// ---- 显示探索视图 ----
+// ---- 显示/隐藏探索视图 ----
 function showExploreView() {
   exploreView.style.display = 'block';
   document.body.style.overflow = 'hidden';
-
-  if (!mapInitialized) {
-    setTimeout(() => {
-      initMap();
-    }, 150);
+  if (!globeInitialized) {
+    setTimeout(() => { initGlobe(); }, 200);
   } else {
-    setTimeout(() => { map.invalidateSize(); }, 100);
+    globeAutoRotate = true;
+    onGlobeResize();
   }
 }
 
-// ---- 隐藏探索视图 ----
 function hideExploreView() {
   exploreView.style.display = 'none';
   document.body.style.overflow = '';
