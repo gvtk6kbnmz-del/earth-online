@@ -3482,12 +3482,14 @@ window.addEventListener('resize', resizeConfettiCanvas);
    8. 3D 地球探索系统
    ============================================================ */
 let globeInitialized = false;
-let globeScene, globeCamera, globeRenderer, globeGroup, globeMesh;
+let globeScene, globeCamera, globeRenderer, globeGroup, globeMesh, globeCloudGroup;
 let globeMarkers = [];
 let globeAutoRotate = true;
 let globeDragging = false;
 let globePrevPointer = { x: 0, y: 0 };
+let globeVelocity = { x: 0, y: 0 };
 let globeZoom = 14;
+let globeTargetZoom = 14;
 const GLOBE_RADIUS = 3.75;
 
 const exploreView = document.getElementById('exploreView');
@@ -3526,7 +3528,7 @@ function getFeaturedLocation() {
   return WORLD_LOCATIONS[idx];
 }
 
-// ---- 初始化3D地球（三渲二 / Cel-Shading 风格）----
+// ---- 初始化3D地球（Apple Maps / 高德地图写实风格）----
 function initGlobe() {
   const container = mapContainerEl;
   const w = container.clientWidth;
@@ -3536,6 +3538,7 @@ function initGlobe() {
 
   globeCamera = new THREE.PerspectiveCamera(40, w / h, 0.5, 60);
   globeCamera.position.set(0, 2, globeZoom);
+  globeTargetZoom = globeZoom;
 
   globeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   globeRenderer.setSize(w, h);
@@ -3543,7 +3546,7 @@ function initGlobe() {
   globeRenderer.domElement.className = 'globe-canvas';
   container.appendChild(globeRenderer.domElement);
 
-  // Globe group（用于旋转）
+  // Globe group
   globeGroup = new THREE.Group();
   globeGroup.rotation.x = 0.3;
   globeScene.add(globeGroup);
@@ -3551,52 +3554,54 @@ function initGlobe() {
   // ---- 星空背景 ----
   const starsGeom = new THREE.BufferGeometry();
   const starsVerts = [];
-  for (let i = 0; i < 2000; i++) {
+  for (let i = 0; i < 1500; i++) {
     const t = Math.random() * Math.PI * 2;
     const p = Math.acos(2 * Math.random() - 1);
     const r = 22 + Math.random() * 18;
     starsVerts.push(r * Math.sin(p) * Math.cos(t), r * Math.sin(p) * Math.sin(t), r * Math.cos(p));
   }
   starsGeom.setAttribute('position', new THREE.Float32BufferAttribute(starsVerts, 3));
-  const starsMat = new THREE.PointsMaterial({ color: 0xccccff, size: 0.05, transparent: true, opacity: 0.5 });
+  const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.04, transparent: true, opacity: 0.3 });
   globeScene.add(new THREE.Points(starsGeom, starsMat));
 
-  // ---- 三渲二渐变映射（4阶色阶）----
-  const gradCanvas = document.createElement('canvas');
-  gradCanvas.width = 4; gradCanvas.height = 1;
-  const gctx = gradCanvas.getContext('2d');
-  gctx.fillStyle = '#1a2740'; gctx.fillRect(0, 0, 1, 1);
-  gctx.fillStyle = '#334d73'; gctx.fillRect(1, 0, 1, 1);
-  gctx.fillStyle = '#6b8db8'; gctx.fillRect(2, 0, 1, 1);
-  gctx.fillStyle = '#b8d4f0'; gctx.fillRect(3, 0, 1, 1);
-  const gradientMap = new THREE.CanvasTexture(gradCanvas);
-  gradientMap.minFilter = THREE.NearestFilter;
-  gradientMap.magFilter = THREE.NearestFilter;
-
-  // ---- 地球（三渲二 Toon 材质）----
-  const earthGeom = new THREE.SphereGeometry(GLOBE_RADIUS, 64, 48);
+  // ---- 纹理加载 ----
   const loader = new THREE.TextureLoader();
   const earthTex = loader.load('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
   earthTex.colorSpace = THREE.SRGBColorSpace;
-  const earthMat = new THREE.MeshToonMaterial({
+  const specularTex = loader.load('https://threejs.org/examples/textures/planets/earth_specular_2048.jpg');
+  const cloudTex = loader.load('https://threejs.org/examples/textures/planets/earth_clouds_1024.png');
+
+  // ---- 地球（Phong 材质 + specular map → 海洋反光）----
+  const earthGeom = new THREE.SphereGeometry(GLOBE_RADIUS, 80, 60);
+  const earthMat = new THREE.MeshPhongMaterial({
     map: earthTex,
-    gradientMap: gradientMap,
-    color: 0xffffff,
+    specularMap: specularTex,
+    specular: new THREE.Color(0x222233),
+    shininess: 12,
   });
   globeMesh = new THREE.Mesh(earthGeom, earthMat);
   globeGroup.add(globeMesh);
 
-  // ---- 描边（三渲二 inverted hull 技法）----
-  const outlineGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.06, 64, 48);
-  const outlineMat = new THREE.MeshBasicMaterial({ color: 0x0d1117, side: THREE.BackSide });
-  globeGroup.add(new THREE.Mesh(outlineGeom, outlineMat));
+  // ---- 云层（半透明叠加，独立缓慢漂移）----
+  globeCloudGroup = new THREE.Group();
+  const cloudGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.04, 72, 54);
+  const cloudMat = new THREE.MeshPhongMaterial({
+    map: cloudTex,
+    transparent: true,
+    opacity: 0.25,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.FrontSide,
+  });
+  globeCloudGroup.add(new THREE.Mesh(cloudGeom, cloudMat));
+  globeGroup.add(globeCloudGroup);
 
-  // ---- 大气光晕（更锐利的三渲二风格）----
-  const glowGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.14, 64, 48);
+  // ---- 大气光晕（Fresnel 散射，极淡蓝边）----
+  const glowGeom = new THREE.SphereGeometry(GLOBE_RADIUS + 0.1, 72, 54);
   const glowMat = new THREE.ShaderMaterial({
     uniforms: {},
     vertexShader: 'varying vec3 vN; void main(){ vN = normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-    fragmentShader: 'varying vec3 vN; void main(){ float i=pow(0.62-dot(vN,vec3(0,0,1)),4.5); gl_FragColor=vec4(0.45,0.65,0.95,i*0.28); }',
+    fragmentShader: 'varying vec3 vN; void main(){ float f=1.0-abs(dot(vN,vec3(0,0,1))); float i=pow(f,3.5); gl_FragColor=vec4(0.32,0.60,0.92,i*0.15); }',
     blending: THREE.AdditiveBlending,
     side: THREE.FrontSide,
     transparent: true,
@@ -3604,14 +3609,14 @@ function initGlobe() {
   });
   globeGroup.add(new THREE.Mesh(glowGeom, glowMat));
 
-  // ---- 光照（Toon 材质用强方向光 + 弱环境光）----
-  globeScene.add(new THREE.AmbientLight(0x445577, 0.9));
-  const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+  // ---- 光照（自然日光 + 微弱补光）----
+  globeScene.add(new THREE.AmbientLight(0x334466, 0.7));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
   sun.position.set(10, 5, 8);
   globeScene.add(sun);
-  const fill = new THREE.DirectionalLight(0x5577aa, 0.3);
-  fill.position.set(-5, -2, -4);
-  globeScene.add(fill);
+  const rim = new THREE.DirectionalLight(0x8899cc, 0.4);
+  rim.position.set(-8, -2, -6);
+  globeScene.add(rim);
 
   // 地点标记
   renderGlobeMarkers();
@@ -3639,20 +3644,46 @@ function initGlobe() {
   // 动画循环
   (function animate() {
     requestAnimationFrame(animate);
-    if (globeAutoRotate && !globeDragging) {
-      globeGroup.rotation.y += 0.0015;
+
+    // 惯性衰减
+    if (!globeDragging) {
+      globeGroup.rotation.y += globeVelocity.x;
+      globeGroup.rotation.x += globeVelocity.y;
+      globeVelocity.x *= 0.94;
+      globeVelocity.y *= 0.94;
     }
+
+    // 自动旋转（惯性停止后才恢复）
+    if (globeAutoRotate && !globeDragging && Math.abs(globeVelocity.x) < 0.0003 && Math.abs(globeVelocity.y) < 0.0003) {
+      globeGroup.rotation.y += 0.0012;
+    }
+
+    // 云层缓慢漂移（相对地表）
+    if (globeCloudGroup) {
+      globeCloudGroup.rotation.y += 0.0001;
+    }
+
+    // 平滑缩放
+    const zd = globeTargetZoom - globeCamera.position.z;
+    if (Math.abs(zd) > 0.02) {
+      globeCamera.position.z += zd * 0.1;
+    } else if (zd !== 0) {
+      globeCamera.position.z = globeTargetZoom;
+    }
+
+    // 今日推荐标记脉冲
     const t = Date.now() * 0.001;
     globeMarkers.forEach(m => {
-      if (m.isFeatured) m.mesh.scale.setScalar(1 + Math.sin(t * 3) * 0.22);
+      if (m.isFeatured) m.mesh.scale.setScalar(1 + Math.sin(t * 2.5) * 0.15);
     });
+
     globeRenderer.render(globeScene, globeCamera);
   })();
 
   globeInitialized = true;
 }
 
-// ---- 渲染地点标记（三渲二风格）----
+// ---- 渲染地点标记（Apple Maps 风格：高亮小球 + 推荐光环）----
 function renderGlobeMarkers() {
   globeMarkers.forEach(m => globeGroup.remove(m.mesh));
   globeMarkers = [];
@@ -3663,22 +3694,22 @@ function renderGlobeMarkers() {
   WORLD_LOCATIONS.forEach(loc => {
     const isVisited = exploredSet.has(loc.id);
     const isFeatured = loc.id === featured.id;
-    const pos = latLngToVec3(loc.lat, loc.lng, GLOBE_RADIUS + 0.2);
+    const pos = latLngToVec3(loc.lat, loc.lng, GLOBE_RADIUS + 0.18);
 
-    const size = isFeatured ? 0.16 : 0.10;
-    const geom = isFeatured
-      ? new THREE.OctahedronGeometry(size, 0)
-      : new THREE.SphereGeometry(size, 12, 12);
+    const size = isFeatured ? 0.13 : 0.08;
+    const geom = new THREE.SphereGeometry(size, 20, 20);
 
     let color;
     if (isFeatured) color = 0xf59e0b;
     else if (isVisited) color = 0x34c759;
     else color = 0x818cf8;
 
-    const mat = new THREE.MeshToonMaterial({
+    const mat = new THREE.MeshPhongMaterial({
       color,
       emissive: color,
-      emissiveIntensity: 0.45,
+      emissiveIntensity: 0.35,
+      specular: 0xffffff,
+      shininess: 30,
     });
 
     const dot = new THREE.Mesh(geom, mat);
@@ -3686,8 +3717,8 @@ function renderGlobeMarkers() {
     dot.userData = { locationId: loc.id, isFeatured, isVisited };
 
     if (isFeatured) {
-      const ringGeom = new THREE.TorusGeometry(size * 1.9, 0.025, 8, 16);
-      const ringMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.8 });
+      const ringGeom = new THREE.TorusGeometry(size * 1.6, 0.018, 8, 24);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.7 });
       const ring = new THREE.Mesh(ringGeom, ringMat);
       ring.position.set(0, 0, 0);
       dot.add(ring);
@@ -3718,33 +3749,38 @@ function onGlobeClick(e) {
   }
 }
 
-// ---- 拖拽旋转 ----
+// ---- 拖拽旋转（带惯性）----
 function onGlobeDown(e) {
   globeDragging = true;
   globeAutoRotate = false;
+  globeVelocity.x = 0;
+  globeVelocity.y = 0;
   globePrevPointer.x = e.clientX;
   globePrevPointer.y = e.clientY;
 }
 
 function onGlobeMove(e) {
   if (!globeDragging) return;
-  globeGroup.rotation.y += (e.clientX - globePrevPointer.x) * 0.005;
-  globeGroup.rotation.x += (e.clientY - globePrevPointer.y) * 0.005;
+  const dx = (e.clientX - globePrevPointer.x) * 0.005;
+  const dy = (e.clientY - globePrevPointer.y) * 0.005;
+  globeGroup.rotation.y += dx;
+  globeGroup.rotation.x += dy;
   globeGroup.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, globeGroup.rotation.x));
+  globeVelocity.x = dx;
+  globeVelocity.y = dy;
   globePrevPointer.x = e.clientX;
   globePrevPointer.y = e.clientY;
 }
 
 function onGlobeUp(e) {
   globeDragging = false;
-  setTimeout(() => { globeAutoRotate = true; }, 2000);
+  setTimeout(() => { globeAutoRotate = true; }, 2500);
 }
 
 function onGlobeWheel(e) {
   e.preventDefault();
-  globeZoom += e.deltaY * 0.01;
-  globeZoom = Math.max(6, Math.min(30, globeZoom));
-  globeCamera.position.z = globeZoom;
+  globeTargetZoom += e.deltaY * 0.01;
+  globeTargetZoom = Math.max(6, Math.min(30, globeTargetZoom));
 }
 
 function onGlobeResize() {
@@ -3835,6 +3871,7 @@ function showExploreView() {
     setTimeout(() => { initGlobe(); }, 200);
   } else {
     globeAutoRotate = true;
+    globeTargetZoom = globeCamera.position.z;
     onGlobeResize();
   }
 }
