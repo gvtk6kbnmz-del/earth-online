@@ -3559,10 +3559,25 @@ function createGlowTexture() {
   return new THREE.CanvasTexture(c);
 }
 
+// ---- 波纹分量（复用于位置调制和亮度调制）----
+function getRippleComponents(lat, theta) {
+  const wave1 = Math.sin(lat * 14) * Math.cos(theta * 10);
+  const wave2 = Math.sin(theta * 7 + lat * 3);
+  return { wave1, wave2 };
+}
+
 // ---- 星尘球面分布（径向散射 + 波纹调制）----
-function dustSphere(count, radius) {
+function dustSphere(count, radius, seed) {
   const pts = new Float32Array(count * 3);
   const phi = Math.PI * (3 - Math.sqrt(5));
+  // 可选确定性 RNG（seed 传入时启用，保证分布可复现）
+  let rng;
+  if (seed !== undefined) {
+    let s = Math.abs(seed) % 2147483647 || 1;
+    rng = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+  } else {
+    rng = Math.random;
+  }
   for (let i = 0; i < count; i++) {
     const y = 1 - (i / (count - 1)) * 2;
     const rAtY = Math.sqrt(1 - y * y);
@@ -3571,22 +3586,22 @@ function dustSphere(count, radius) {
     const ny = y;
     const nz = Math.sin(theta) * rAtY;
     // 径向散射：大部分粒子在球面附近，少数向外飘散
-    const scatterRand = Math.random();
+    const scatterRand = rng();
     let offset;
     if (scatterRand < 0.65) {
       // 65% 核心密集：紧贴球面微弱抖动
-      offset = (Math.random() - 0.5) * 0.06;
+      offset = (rng() - 0.5) * 0.06;
     } else if (scatterRand < 0.88) {
       // 23% 过渡区：轻微向外散射
-      offset = (Math.random() - 0.2) * 0.18;
+      offset = (rng() - 0.2) * 0.18;
     } else {
       // 12% 外层飘散：像被风吹散的灰尘
-      offset = Math.random() * 0.38;
+      offset = rng() * 0.38;
     }
     // 波纹调制：在球面上形成涟漪状的密度变化
     const lat = Math.asin(Math.max(-1, Math.min(1, ny)));
-    const ripple = Math.sin(lat * 14) * Math.cos(theta * 10) * 0.045
-                 + Math.sin(theta * 7 + lat * 3) * 0.025;
+    const { wave1, wave2 } = getRippleComponents(lat, theta);
+    const ripple = wave1 * 0.045 + wave2 * 0.025;
     offset += ripple;
     const r = radius + offset;
     pts[i * 3] = nx * r;
@@ -3694,7 +3709,7 @@ function initGlobe() {
 
   // ---- 星尘粒子地球 ----
   const glowTex = createGlowTexture();
-  const positions = dustSphere(PARTICLE_COUNT, GLOBE_RADIUS);
+  const positions = dustSphere(PARTICLE_COUNT, GLOBE_RADIUS, 42);
 
   particleGeom = new THREE.BufferGeometry();
   particleGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -3733,9 +3748,8 @@ function initGlobe() {
     const lat = Math.asin(Math.max(-1, Math.min(1, ny)));
     const theta = Math.atan2(nz, nx);
     // 微弱的波纹亮度，让未探索的球体也有层次感
-    const ripple = Math.sin(lat * 14) * Math.cos(theta * 10) * 0.04
-                 + Math.sin(theta * 7 + lat * 3) * 0.03
-                 + 0.04;
+    const { wave1, wave2 } = getRippleComponents(lat, theta);
+    const ripple = wave1 * 0.04 + wave2 * 0.03 + 0.04;
     particleBaseBrightness[i] = Math.max(0.015, ripple);
   }
 
@@ -3745,7 +3759,7 @@ function initGlobe() {
   applyParticleColors();
 
   // ---- 外层星尘光晕（独立的飘散粒子层）----
-  const dustPositions = dustSphere(DUST_COUNT, GLOBE_RADIUS + 0.25);
+  const dustPositions = dustSphere(DUST_COUNT, GLOBE_RADIUS + 0.25, 99);
   dustGeom = new THREE.BufferGeometry();
   dustGeom.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
   // 外层星尘颜色：淡蓝紫
