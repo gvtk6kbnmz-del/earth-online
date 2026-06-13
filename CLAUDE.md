@@ -1,0 +1,114 @@
+# earth-online · 地球Online 开发指南
+
+## 项目概览
+单文件 Web 应用 (`index.html`)，约 4000+ 行，包含 HTML/CSS/JS 三部分。
+- **定位**：每日随机挑战 + 3D 地球探索 + 生命日历统计
+- **设计风格**：深色背景 + 毛玻璃卡片（glassmorphism）
+- **部署**：GitHub Pages（`main` 分支 → 自动部署）
+- **无构建工具**：直接用原生 HTML/CSS/JS，零依赖框架
+
+## 技能套件优先级（Superpowers + gstack 共存规则）
+
+本项目同时安装了两套技能套件。为避免冲突，遵循以下优先级：
+
+### 主框架：gstack
+gstack 是默认工作流。以下场景使用 gstack：
+- 需求设计 → `spec` / `design-consultation`
+- 实现规划 → `autoplan` / `plan-tune`
+- 代码审查 → `review` / `devex-review`
+- QA 测试 → `qa` / `qa-only` / `browse`
+- 部署上线 → `land-and-deploy` / `ship`
+- 安全审计 → `cso`
+- 文档生成 → `document-generate` / `document-release`
+- 回顾复盘 → `retro` / `learn`
+
+### 补充：Superpowers（仅以下三个场景）
+Superpowers 只在 gstack 没有覆盖的领域介入：
+- **TDD** → `test-driven-development`（gstack 无内置 TDD 流程）
+- **Git Worktree 隔离** → `using-git-worktrees`（gstack 无内置 worktree）
+- **系统化调试** → `systematic-debugging`（先找根因再修，gstack 的 investigate 偏信息收集）
+
+### 冲突裁决
+- 任何 gstack 已覆盖的场景，**忽略 Superpowers 的同功能技能**
+- Superpowers 的 `brainstorming`、`writing-plans`、`requesting-code-review`、`verification-before-completion`、`finishing-a-development-branch` 等与 gstack 重叠的技能 **不使用**
+- 用户明确指令优先于所有技能套件
+
+## 代码结构
+```
+index.html
+  ├─ <style>   CSS（~1100 行）：变量定义、组件样式、动画
+  ├─ <body>    HTML（~200 行）：视图结构
+  └─ <script>  JS（~3000 行）：状态管理、交互逻辑、Three.js
+```
+
+### 关键区域
+| 行号范围 | 内容 |
+|---------|------|
+| ~1-1100 | CSS 变量 + 全局样式 |
+| ~2480-2505 | 探索视图 HTML（地球容器） |
+| ~2840-2880 | 默认状态 DEFAULT_STATE |
+| ~3050-3100 | 任务池 TASK_POOL + 换一换逻辑 |
+| ~3480-3880 | **Three.js 3D 地球**（核心模块） |
+| ~3820-3950 | 设置页 + Life Widget |
+
+## 技术要点
+
+### Three.js 地球（探索页）
+- CDN：`three@0.160.0`
+- **粒子星尘风格**：10000 粒子主球体 + 2000 粒子外层光晕
+- 分布算法：`dustSphere()` — 斐波那契球面 + 径向散射（65%核心密集 / 23%过渡 / 12%飘散）+ 波纹调制
+- 材质：`PointsMaterial` + `AdditiveBlending` + Canvas 柔光纹理（64×64 径向渐变）
+- 颜色系统：`vertexColors` 逐粒子着色，深蓝紫基色 → 亮青白探索态
+- 探索机制：`updateParticleTargets()` 根据已探索地点计算粒子亮度，`applyParticleColors()` 映射为顶点颜色
+- 外层光晕：独立 `dustSystem`，更大半径 + 低透明度，营造梦幻散射感
+- 交互：拖拽旋转（带惯性衰减 0.94）+ 滚轮缩放 + 自动旋转 + Raycaster 点击标记
+- 性能基准（移动端）：
+  - 像素比上限：1.5
+  - 总粒子数：12000（10000 主体 + 2000 光晕）
+  - 无纹理加载、无光照计算、纯点渲染
+  - **新增粒子效果时控制总数在 15000 以内**
+
+### CSS 设计系统
+- 全部颜色通过 CSS 变量控制（`:root` 中定义）
+- 毛玻璃效果：`var(--glass-bg)` + `backdrop-filter: blur()`
+- 圆角体系：`--radius-xs` / `--radius-sm` / `--radius-md` / `--radius-lg` / `--radius-xl` / `--radius-pill`
+- **新增 UI 元素一律使用已有变量，不硬编码颜色**
+
+### 状态管理
+- `appState` 对象存储在 `localStorage`，key 为 `earth-online-state`
+- 每日任务基于日期 seed（`getDailySeed()`），保证同一天所有人看到相同任务
+- 换一换逻辑：跟踪当天所有已见任务（`task-seen-{date}`），避免重复
+
+## 开发注意事项
+
+### 移动端兼容
+- **所有 UI 改动必须在 iPhone 尺寸（375×812）下测试**
+- 使用 `var(--safe-top)` / `var(--safe-bottom)` 适配刘海屏
+- 底部导航栏高度约 70-80px，全局视口元素需预留空间
+- 3D 地球的相机位置影响移动端显示，修改后需在真机验证
+
+### Git 推送
+- 网络环境可能需要 HTTP/1.1：`git -c http.version=HTTP/1.1 push origin main`
+- Commit message 使用中文，格式：`模块名：简述改动`
+
+### 提交前自检
+1. `node --check` 验证 JS 语法（整个 `<script>` 块提取后检查）
+2. 查看 diff：`git diff --stat`
+3. 确认没有遗留 `console.log` 调试代码
+4. 新增 CSS 是否使用了已有 CSS 变量
+
+## 设计偏好（来自用户反馈）
+
+### 前端风格
+- 偏好：干净、高质感、科技梦幻感（粒子星尘风格）
+- 地球：粒子球体 + 径向散射 + 柔光纹理，拒绝廉价 3D 纹理
+- 配色：深蓝紫 → 亮青白渐变，深色背景搭配发光粒子
+- 动画：简洁、流畅，避免复杂多阶段动画
+- 日历：偏好简约现代设计（如点阵日历）
+
+### 常见反馈
+- "有点廉价 3D 感" → 避免纹理贴图球体，用纯粒子/点云渲染
+- "感觉卡卡的" → 控制粒子总数 < 15000，降低像素比
+- "被导航栏遮住了" → 调整元素在视口中的位置
+- "没有之前好看" → 尊重用户审美，改动前先沟通方向
+- 粒子风格偏好：中间密集、边缘散射融入背景、柔光光晕、科技感配色
