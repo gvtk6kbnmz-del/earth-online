@@ -1085,6 +1085,101 @@ button:active {
 .explore-legend-dot--unvisited { background: #818cf8; box-shadow: 0 0 6px rgba(129,140,248,0.5); }
 .explore-legend-dot--visited { background: #34c759; box-shadow: 0 0 6px rgba(52,199,89,0.5); }
 .explore-legend-dot--featured { background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.6); }
+.explore-legend-dot--historical { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+.explore-legend-dot--scenic { background: #34c759; box-shadow: 0 0 6px rgba(52,199,89,0.5); }
+.explore-legend-dot--mythological { background: #a855f7; box-shadow: 0 0 6px rgba(168,85,247,0.5); }
+
+/* China 子地图标记 */
+.china-marker {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 5;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.china-marker:active {
+  transform: translate(-50%, -50%) scale(1.4);
+}
+.china-marker--historical {
+  width: 13px; height: 13px;
+  background: #f59e0b;
+  box-shadow: 0 0 10px rgba(245,158,11,0.7);
+}
+.china-marker--scenic {
+  width: 12px; height: 12px;
+  background: #34c759;
+  box-shadow: 0 0 10px rgba(52,199,89,0.6);
+}
+.china-marker--mythological {
+  width: 14px; height: 14px;
+  background: #a855f7;
+  box-shadow: 0 0 12px rgba(168,85,247,0.7);
+  animation: mythGlow 2s ease-in-out infinite;
+}
+@keyframes mythGlow {
+  0%, 100% { box-shadow: 0 0 12px rgba(168,85,247,0.7); }
+  50% { box-shadow: 0 0 20px rgba(168,85,247,0.95); }
+}
+
+/* China 模式返回按钮 */
+.china-back-btn {
+  position: absolute;
+  top: var(--safe-top);
+  left: 60px;
+  z-index: 60;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: rgba(22, 22, 32, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(245,158,11,0.3);
+  color: #f59e0b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.china-back-btn:hover {
+  background: rgba(30, 30, 44, 0.92);
+  border-color: rgba(245,158,11,0.6);
+}
+
+/* China 标题 */
+.china-title {
+  position: absolute;
+  top: calc(var(--safe-top) + 44px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(245,158,11,0.4);
+  pointer-events: none;
+}
+.china-title-sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  margin-left: 4px;
+}
+
+/* China 标记光环 */
+.china-marker-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid #34c759;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: ringReveal 0.4s ease-out forwards;
+}
 
 /* 地点详情弹窗 */
 .location-popup-wrapper {
@@ -2743,6 +2838,40 @@ const WORLD_LOCATIONS = [
   { id: 'santiago',  name: '圣地亚哥', country: '智利',   emoji: '🗿', lat: -33.4489, lng: -70.6693, task: '模仿复活节岛石像的表情坚持10秒',                   continent: 'americas', difficulty: 2, funFact: '复活节岛上有887尊摩艾石像' },
 ];
 
+// ---- 中国子地点（中英双语） ----
+const CHINA_LOCATIONS = [
+  // ===== 名胜古迹 Historical Sites =====
+  { id: 'greatwall',     name: '万里长城',     nameEn: 'The Great Wall',         emoji: '🧱', lat: 40.4319, lng: 116.5704, type: 'historical',  task: '在长城上走一段并数一数烽火台',             taskEn: 'Walk along the Great Wall and count the watchtowers',           difficulty: 2, funFact: '长城总长度超过21000公里，可绕地球半圈',   funFactEn: 'The Great Wall stretches over 21,000 km — half the Earth\'s circumference' },
+  { id: 'terracotta',    name: '兵马俑',       nameEn: 'Terracotta Warriors',     emoji: '🗿', lat: 34.3852, lng: 109.2731, type: 'historical',  task: '观察兵马俑的面部表情，找到最独特的那一个',   taskEn: 'Find the warrior with the most unique facial expression',        difficulty: 1, funFact: '每个兵马俑的面部都是独一无二的艺术品',     funFactEn: 'Every Terracotta Warrior has a one-of-a-kind face' },
+  { id: 'mogao',         name: '莫高窟',       nameEn: 'Mogao Caves',             emoji: '🪷', lat: 40.0411, lng: 94.8086,  type: 'historical',  task: '想象自己在壁画飞天中穿梭',                   taskEn: 'Imagine soaring through the celestial flying apsaras',          difficulty: 2, funFact: '莫高窟现存735个洞窟，壁画45000平方米',      funFactEn: 'Mogao has 735 caves with 45,000 m² of murals' },
+  { id: 'longmen',       name: '龙门石窟',     nameEn: 'Longmen Grottoes',        emoji: '🙏', lat: 34.5619, lng: 112.4691, type: 'historical',  task: '仰望卢舍那大佛，感受千年前的注视',           taskEn: 'Gaze up at the 17-meter Vairocana Buddha',                      difficulty: 1, funFact: '卢舍那大佛高17.14米，仅耳朵就达1.9米',     funFactEn: 'The Vairocana Buddha is 17.14m tall, ears alone are 1.9m' },
+  { id: 'pingyao',       name: '平遥古城',     nameEn: 'Pingyao Ancient City',    emoji: '🏘️',  lat: 37.2019, lng: 112.1766, type: 'historical',  task: '在古城墙上走一圈，感受明清时光',             taskEn: 'Walk the ancient walls through Ming-Qing history',               difficulty: 1, funFact: '平遥古城完整保存了明清时期县城格局',         funFactEn: 'Pingyao perfectly preserves the Ming-Qing county layout' },
+  { id: 'potala',        name: '布达拉宫',     nameEn: 'Potala Palace',           emoji: '🏰',  lat: 29.6573, lng: 91.1172,  type: 'historical',  task: '在世界最高的宫殿前双手合十',                 taskEn: 'Press your palms together at the world\'s highest palace',       difficulty: 3, funFact: '布达拉宫海拔3700米，拥有1000多间房间',       funFactEn: 'Potala Palace sits at 3,700m with over 1,000 rooms' },
+  { id: 'forbidden',     name: '故宫',         nameEn: 'Forbidden City',          emoji: '🏯',  lat: 39.9163, lng: 116.3972, type: 'historical',  task: '在太和殿前想象百官朝拜的盛大场面',           taskEn: 'Imagine the imperial court at the Hall of Supreme Harmony',      difficulty: 1, funFact: '故宫有8707间房间，是世界上最大的宫殿群',     funFactEn: 'The Forbidden City has 8,707 rooms, the world\'s largest palace complex' },
+  { id: 'temple_heaven', name: '天坛',         nameEn: 'Temple of Heaven',        emoji: '⛩️',  lat: 39.8822, lng: 116.4066, type: 'historical',  task: '在回音壁前轻声说一句心里话',                 taskEn: 'Whisper a secret at the Echo Wall',                              difficulty: 1, funFact: '天坛回音壁能传声百米，古人的声学奇迹',       funFactEn: 'The Echo Wall transmits whispers over 100 meters' },
+
+  // ===== 自然景观 Scenic Spots =====
+  { id: 'huangshan',     name: '黄山',         nameEn: 'Yellow Mountain',         emoji: '⛰️',  lat: 30.1344, lng: 118.1689, type: 'scenic',      task: '在云海中拍一张迎客松',                       taskEn: 'Photograph the Welcoming Pine in a sea of clouds',              difficulty: 2, funFact: '黄山被列入世界文化与自然双遗产名录',         funFactEn: 'Yellow Mountain is a UNESCO World Heritage Site' },
+  { id: 'zhangjiajie',   name: '张家界',       nameEn: 'Zhangjiajie',             emoji: '🏔️',  lat: 29.3373, lng: 110.4792, type: 'scenic',      task: '在悬浮山之间寻找阿凡达的踪迹',               taskEn: 'Hunt for Avatar traces among the floating peaks',               difficulty: 2, funFact: '张家界的石英砂岩峰林启发了电影《阿凡达》',   funFactEn: 'Zhangjiajie\'s sandstone pillars inspired Avatar\'s floating mountains' },
+  { id: 'jiuzhaigou',    name: '九寨沟',       nameEn: 'Jiuzhaigou Valley',       emoji: '🏞️',  lat: 33.2624, lng: 103.9176, type: 'scenic',      task: '数一数五花海有几种颜色',                     taskEn: 'Count how many colors ripple in Five-Flower Lake',              difficulty: 1, funFact: '九寨沟有114个湖泊，人称"人间瑶池"',        funFactEn: 'Jiuzhaigou has 114 crystal-clear lakes, known as "Heaven on Earth"' },
+  { id: 'guilin',        name: '桂林山水',     nameEn: 'Guilin Karst',            emoji: '🎋',  lat: 25.2736, lng: 110.2900, type: 'scenic',      task: '在漓江边拍一张山水倒影',                     taskEn: 'Capture the karst peaks mirrored in the Li River',              difficulty: 1, funFact: '桂林山水是20元人民币背面的图案',             funFactEn: 'Guilin\'s scenery graces the back of China\'s 20 RMB note' },
+  { id: 'westlake',      name: '西湖',         nameEn: 'West Lake',               emoji: '🌊',  lat: 30.2417, lng: 120.1473, type: 'scenic',      task: '在断桥边吟一句"欲把西湖比西子"',           taskEn: 'Recite an ancient poem by the Broken Bridge',                   difficulty: 1, funFact: '西湖十景，每一景都有千年传说',               funFactEn: 'West Lake\'s "Ten Scenes" each hold a millennial legend' },
+  { id: 'changbaishan',  name: '长白山天池',   nameEn: 'Heavenly Lake',           emoji: '🌋',  lat: 41.9961, lng: 128.0614, type: 'scenic',      task: '在火山口湖前许一个愿望',                     taskEn: 'Make a wish before the volcanic crater lake',                   difficulty: 2, funFact: '天池是中国最深的湖泊，深达373米',            funFactEn: 'Heavenly Lake is China\'s deepest at 373 meters' },
+  { id: 'tianshan',      name: '天山天池',     nameEn: 'Tianshan Tianchi',        emoji: '💎',  lat: 43.8853, lng: 88.1318,  type: 'scenic',      task: '在西王母的瑶池边寻找仙踪',                   taskEn: 'Seek the Queen Mother\'s traces by the legendary jade pool',    difficulty: 2, funFact: '传说天山天池就是神话中的西王母瑶池',         funFactEn: 'Legend says this is the Jade Pool of the Queen Mother of the West' },
+
+  // ===== 神话修仙地 Mythological Places =====
+  { id: 'kunlun',        name: '昆仑山',       nameEn: 'Kunlun Mountains',        emoji: '🐉',  lat: 35.9792, lng: 80.2320,  type: 'mythological', task: '想象元始天尊在昆仑虚开坛讲道',            taskEn: 'Imagine the Primordial Lord of Heaven preaching at Kunlun',     difficulty: 3, funFact: '昆仑山在中国神话中是"万山之祖"，仙人居所', funFactEn: 'Kunlun is the "Ancestor of Mountains" and abode of immortals' },
+  { id: 'penglai',       name: '蓬莱仙岛',     nameEn: 'Penglai Fairyland',       emoji: '🏝️',  lat: 37.8223, lng: 120.7525, type: 'mythological', task: '在海市蜃楼中寻找八仙的踪迹',              taskEn: 'Seek the Eight Immortals crossing the sea in the mirage',       difficulty: 1, funFact: '蓬莱是传说中八仙过海、各显神通的地方',       funFactEn: 'Penglai is where the Eight Immortals displayed their powers' },
+  { id: 'emei',          name: '峨眉山',       nameEn: 'Mount Emei',              emoji: '☁️',  lat: 29.5647, lng: 103.3473, type: 'mythological', task: '在金顶看一次神秘庄严的佛光',              taskEn: 'Witness the sacred Buddha\'s Light at the Golden Summit',       difficulty: 2, funFact: '峨眉山是普贤菩萨道场，佛教四大名山之一',      funFactEn: 'Mount Emei is the bodhimanda of Samantabhadra Bodhisattva' },
+  { id: 'wudang',        name: '武当山',       nameEn: 'Wudang Mountains',        emoji: '⚔️',  lat: 32.3999, lng: 111.0067, type: 'mythological', task: '在紫霄宫前缓缓打一套太极拳',              taskEn: 'Practice Tai Chi slowly before the Purple Cloud Temple',        difficulty: 2, funFact: '武当山是张三丰创立太极拳的圣地',             funFactEn: 'Wudang is the sacred birthplace of Tai Chi by Zhang Sanfeng' },
+  { id: 'taishan',       name: '泰山',         nameEn: 'Mount Tai',               emoji: '🌄',  lat: 36.2564, lng: 117.0944, type: 'mythological', task: '在玉皇顶迎接第一缕日出',                  taskEn: 'Greet the first sunrise from the Jade Emperor Peak',             difficulty: 2, funFact: '泰山为五岳之首，历代72位皇帝在此封禅',        funFactEn: 'Mount Tai is chief of Five Sacred Mountains, 72 emperors performed rites here' },
+
+  // ===== 现代地标 Modern Landmarks =====
+  { id: 'shanghai_bund', name: '上海外滩',     nameEn: 'The Bund',                emoji: '🌃',  lat: 31.2359, lng: 121.4920, type: 'scenic',      task: '在外滩拍一张浦东摩天大楼的天际线',           taskEn: 'Capture the stunning Pudong skyline from the Bund',             difficulty: 1, funFact: '外滩有"万国建筑博览群"之称，52幢风格各异',  funFactEn: 'The Bund is a "Gallery of World Architecture" with 52 unique buildings' },
+  { id: 'canton_tower',  name: '广州塔',       nameEn: 'Canton Tower',            emoji: '🗼',  lat: 23.1065, lng: 113.3245, type: 'scenic',      task: '在"小蛮腰"下仰望600米的高空',              taskEn: 'Gaze up 600 meters at China\'s "Slim Waist"',                  difficulty: 1, funFact: '广州塔高600米，是中国第一高塔',               funFactEn: 'Canton Tower stands 600m tall, the highest TV tower in China' },
+  { id: 'hongyadong',    name: '洪崖洞',       nameEn: 'Hongya Cave',             emoji: '🏮',  lat: 29.5630, lng: 106.5831, type: 'scenic',      task: '在层层叠叠的灯笼下拍一张魔幻夜景',           taskEn: 'Take a magical photo under cascading red lanterns',             difficulty: 1, funFact: '洪崖洞被称为现实版"千与千寻"汤屋',         funFactEn: 'Hongya Cave is called the real-life "Spirited Away" bathhouse' },
+];
+
 // 成就徽章定义
 const ACHIEVEMENTS = [
   { id: 'first_task',    name: '初来乍到',   desc: '完成第一个任务',           icon: '🌱', rarity: 'common',    condition: (s) => s.totalCompleted >= 1 },
@@ -2842,6 +2971,7 @@ const DEFAULT_STATE = {
   totalCompleted: 0,
   lastActiveDate: null,
   exploredLocations: [],  // ['tokyo', 'paris', ...]
+  exploredChinaLocations: [],  // ['greatwall', 'huangshan', ...]
   lastExploredDate: null,
   birthDate: null,         // 'YYYY-MM-DD' 用户出生日期
   lifeWidgetVisible: true,     // 首页是否显示生命日历
@@ -3346,6 +3476,16 @@ let mapPanY = 0;
 const MAP_MIN_ZOOM = 1;
 const MAP_MAX_ZOOM = 5;
 
+// ---- China 子地图模式 ----
+let chinaMode = false;
+let chinaModeBackBtn = null;
+const CHINA_BOUNDS = { latMin: 18, latMax: 54, lngMin: 73, lngMax: 135 };
+const CHINA_CENTER = { lat: (18 + 54) / 2, lng: (73 + 135) / 2 };
+
+function getChinaExploredSet() {
+  return new Set(appState.exploredChinaLocations || []);
+}
+
 const exploreView = document.getElementById('exploreView');
 const mapContainerEl = document.getElementById('mapContainer');
 const mapWrapper = document.getElementById('mapWrapper');
@@ -3455,6 +3595,123 @@ function applyMapTransform() {
   mapContent.style.transform = `translate(${mapPanX}px, ${mapPanY}px) scale(${mapZoom})`;
 }
 
+// ---- China 子地图模式 ----
+function enterChinaMode() {
+  chinaMode = true;
+  // 保存当前世界地图状态，以便退出时恢复
+  mapContent.dataset.worldPanX = mapPanX;
+  mapContent.dataset.worldPanY = mapPanY;
+  mapContent.dataset.worldZoom = mapZoom;
+
+  const cw = mapContainerEl.clientWidth;
+  const ch = mapContainerEl.clientHeight;
+  const displayW = parseFloat(mapImage.style.width) || cw;
+  const displayH = parseFloat(mapImage.style.height) || ch;
+
+  // 计算 China 在像素空间中的中心和需要的缩放
+  const chinaCx = (CHINA_CENTER.lng + 180) / 360 * displayW;
+  const chinaCy = (90 - CHINA_CENTER.lat) / 180 * displayH;
+  const chinaSpanLng = CHINA_BOUNDS.lngMax - CHINA_BOUNDS.lngMin;  // 62°
+  const chinaSpanLat = CHINA_BOUNDS.latMax - CHINA_BOUNDS.latMin;  // 36°
+  const zoomLng = (cw * 0.88) / (chinaSpanLng / 360 * displayW);
+  const zoomLat = (ch * 0.88) / (chinaSpanLat / 180 * displayH);
+  const targetZoom = Math.min(zoomLng, zoomLat, 7);
+
+  // 动画到 China
+  const startZoom = mapZoom;
+  const startPanX = mapPanX;
+  const startPanY = mapPanY;
+  const targetPanX = cw / 2 - chinaCx * targetZoom;
+  const targetPanY = ch / 2 - chinaCy * targetZoom;
+
+  const startTime = performance.now();
+  const duration = 600;
+  function animStep(now) {
+    const t = Math.min((now - startTime) / duration, 1);
+    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad
+    mapZoom = startZoom + (targetZoom - startZoom) * ease;
+    mapPanX = startPanX + (targetPanX - startPanX) * ease;
+    mapPanY = startPanY + (targetPanY - startPanY) * ease;
+    applyMapTransform();
+    if (t < 1) { requestAnimationFrame(animStep); }
+  }
+  requestAnimationFrame(animStep);
+
+  // 切换回退按钮
+  exploreBackBtn.style.display = 'none';
+  if (!chinaModeBackBtn) {
+    chinaModeBackBtn = document.createElement('button');
+    chinaModeBackBtn.className = 'china-back-btn';
+    chinaModeBackBtn.innerHTML = '← 返回世界';
+    chinaModeBackBtn.addEventListener('click', exitChinaMode);
+    exploreView.appendChild(chinaModeBackBtn);
+  }
+  chinaModeBackBtn.style.display = 'flex';
+
+  // 显示 China 标题
+  let chinaTitle = document.getElementById('chinaTitle');
+  if (!chinaTitle) {
+    chinaTitle = document.createElement('div');
+    chinaTitle.id = 'chinaTitle';
+    chinaTitle.className = 'china-title';
+    exploreView.appendChild(chinaTitle);
+  }
+  chinaTitle.innerHTML = '🇨🇳 中国 <span class="china-title-sub">China</span>';
+  chinaTitle.style.display = 'block';
+
+  // 更新图例
+  updateChinaLegend(true);
+
+  setTimeout(() => renderFlatMarkers(), duration + 50);
+}
+
+function exitChinaMode() {
+  chinaMode = false;
+
+  const startZoom = mapZoom;
+  const startPanX = mapPanX;
+  const startPanY = mapPanY;
+  const targetZoom = parseFloat(mapContent.dataset.worldZoom || 1);
+  const targetPanX = parseFloat(mapContent.dataset.worldPanX || 0);
+  const targetPanY = parseFloat(mapContent.dataset.worldPanY || 0);
+
+  const startTime = performance.now();
+  const duration = 500;
+  function animStep(now) {
+    const t = Math.min((now - startTime) / duration, 1);
+    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    mapZoom = startZoom + (targetZoom - startZoom) * ease;
+    mapPanX = startPanX + (targetPanX - startPanX) * ease;
+    mapPanY = startPanY + (targetPanY - startPanY) * ease;
+    applyMapTransform();
+    if (t < 1) { requestAnimationFrame(animStep); }
+  }
+  requestAnimationFrame(animStep);
+
+  exploreBackBtn.style.display = '';
+  if (chinaModeBackBtn) chinaModeBackBtn.style.display = 'none';
+  const chinaTitle = document.getElementById('chinaTitle');
+  if (chinaTitle) chinaTitle.style.display = 'none';
+  updateChinaLegend(false);
+
+  setTimeout(() => renderFlatMarkers(), duration + 50);
+}
+
+function updateChinaLegend(china) {
+  const legend = document.querySelector('.explore-legend');
+  if (!legend) return;
+  if (china) {
+    legend.innerHTML = '<span><i class="explore-legend-dot explore-legend-dot--historical"></i> 名胜古迹</span>'
+      + '<span><i class="explore-legend-dot explore-legend-dot--scenic"></i> 自然景观</span>'
+      + '<span><i class="explore-legend-dot explore-legend-dot--mythological"></i> 神话修仙</span>'
+      + '<span><i class="explore-legend-dot explore-legend-dot--visited"></i> 已打卡</span>';
+  } else {
+    legend.innerHTML = '<span><i class="explore-legend-dot explore-legend-dot--unvisited"></i> 未探索</span>'
+      + '<span><i class="explore-legend-dot explore-legend-dot--visited"></i> 已探索</span>'
+      + '<span><i class="explore-legend-dot explore-legend-dot--featured"></i> 今日推荐</span>';
+  }
+}
+
 // ---- 渲染地点标记 ----
 function renderFlatMarkers() {
   mapContent.querySelectorAll('.map-marker, .map-marker-ring').forEach(el => el.remove());
@@ -3464,52 +3721,121 @@ function renderFlatMarkers() {
   const displayW = parseFloat(mapImage.style.width) || cw;
   const displayH = parseFloat(mapImage.style.height) || ch;
 
-  const exploredSet = getExploredSet();
-  const featured = getFeaturedLocation();
+  if (chinaMode) {
+    // ===== China 子地图模式 =====
+    const chinaExploredSet = getChinaExploredSet();
+    const locations = CHINA_LOCATIONS;
+    const featuredIdx = Math.floor(seededRandom(getDailySeed() * 7) * locations.length);
+    const featuredId = locations[featuredIdx]?.id;
 
-  WORLD_LOCATIONS.forEach(loc => {
-    const isVisited = exploredSet.has(loc.id);
-    const isFeatured = loc.id === featured.id;
-    const { x, y } = latLngToPixel(loc.lat, loc.lng, displayW, displayH);
+    locations.forEach(loc => {
+      const isVisited = chinaExploredSet.has(loc.id);
+      const isFeatured = loc.id === featuredId;
+      const { x, y } = latLngToPixel(loc.lat, loc.lng, displayW, displayH);
 
-    const marker = document.createElement('div');
-    marker.className = 'map-marker';
-    if (isFeatured) {
-      marker.classList.add('map-marker--featured');
-      if (isVisited) marker.classList.add('map-marker--visited');
-    } else if (isVisited) {
-      marker.classList.add('map-marker--visited');
-    } else {
-      marker.classList.add('map-marker--unvisited');
-    }
+      // 类型颜色
+      const typeColors = {
+        historical:  { bg: '#f59e0b', glow: 'rgba(245,158,11,0.7)' },
+        scenic:      { bg: '#34c759', glow: 'rgba(52,199,89,0.6)' },
+        mythological:{ bg: '#a855f7', glow: 'rgba(168,85,247,0.7)' },
+      };
+      const tc = typeColors[loc.type] || typeColors.scenic;
 
-    marker.style.left = x + 'px';
-    marker.style.top = y + 'px';
-    marker.dataset.locationId = loc.id;
+      const marker = document.createElement('div');
+      marker.className = 'map-marker china-marker';
+      if (isVisited) {
+        marker.classList.add('map-marker--visited');
+      } else {
+        marker.classList.add('china-marker--' + loc.type);
+      }
+      if (isFeatured && !isVisited) {
+        marker.classList.add('map-marker--featured');
+      }
 
-    marker.addEventListener('pointerdown', (e) => {
-      e.stopPropagation();
+      marker.style.left = x + 'px';
+      marker.style.top = y + 'px';
+      if (!isVisited) {
+        marker.style.background = tc.bg;
+        marker.style.boxShadow = '0 0 10px ' + tc.glow;
+      }
+      marker.dataset.locationId = loc.id;
+      marker.dataset.china = '1';
+
+      marker.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
+      marker.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const set = getChinaExploredSet();
+        showChinaLocationPopup(loc, set.has(loc.id));
+      });
+
+      mapContent.appendChild(marker);
+
+      // 已打卡或推荐光环
+      if (isVisited || isFeatured) {
+        const ring = document.createElement('div');
+        ring.className = 'map-marker-ring china-marker-ring';
+        ring.style.left = x + 'px';
+        ring.style.top = y + 'px';
+        ring.style.width = '28px';
+        ring.style.height = '28px';
+        ring.style.borderColor = isFeatured && !isVisited ? '#f59e0b' : (isVisited ? '#34c759' : tc.bg);
+        mapContent.appendChild(ring);
+      }
     });
-    marker.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const set = getExploredSet();
-      showLocationPopup(loc, set.has(loc.id));
+  } else {
+    // ===== 世界地图模式 =====
+    const exploredSet = getExploredSet();
+    const featured = getFeaturedLocation();
+
+    WORLD_LOCATIONS.forEach(loc => {
+      const isVisited = exploredSet.has(loc.id);
+      const isFeatured = loc.id === featured.id;
+      const { x, y } = latLngToPixel(loc.lat, loc.lng, displayW, displayH);
+
+      const marker = document.createElement('div');
+      marker.className = 'map-marker';
+      if (isFeatured) {
+        marker.classList.add('map-marker--featured');
+        if (isVisited) marker.classList.add('map-marker--visited');
+      } else if (isVisited) {
+        marker.classList.add('map-marker--visited');
+      } else {
+        marker.classList.add('map-marker--unvisited');
+      }
+
+      marker.style.left = x + 'px';
+      marker.style.top = y + 'px';
+      marker.dataset.locationId = loc.id;
+
+      marker.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+      });
+      marker.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // 北京 → 进入中国子地图
+        if (loc.id === 'beijing') {
+          enterChinaMode();
+          return;
+        }
+        const set = getExploredSet();
+        showLocationPopup(loc, set.has(loc.id));
+      });
+
+      mapContent.appendChild(marker);
+
+      // 已打卡或推荐地点添加光环
+      if (isVisited || isFeatured) {
+        const ring = document.createElement('div');
+        ring.className = 'map-marker-ring';
+        ring.style.left = x + 'px';
+        ring.style.top = y + 'px';
+        ring.style.width = '28px';
+        ring.style.height = '28px';
+        ring.style.borderColor = isFeatured && !isVisited ? '#f59e0b' : '#34c759';
+        mapContent.appendChild(ring);
+      }
     });
-
-    mapContent.appendChild(marker);
-
-    // 已打卡或推荐地点添加光环
-    if (isVisited || isFeatured) {
-      const ring = document.createElement('div');
-      ring.className = 'map-marker-ring';
-      ring.style.left = x + 'px';
-      ring.style.top = y + 'px';
-      ring.style.width = '28px';
-      ring.style.height = '28px';
-      ring.style.borderColor = isFeatured && !isVisited ? '#f59e0b' : '#34c759';
-      mapContent.appendChild(ring);
-    }
-  });
+  }
 }
 
 // ---- 平移交互 ----
@@ -3697,6 +4023,50 @@ function checkInLocation(location) {
   showCheckinToast(location);
 }
 
+// ---- China 地点弹窗（中英双语） ----
+function showChinaLocationPopup(location, isVisited) {
+  document.getElementById('lpEmoji').textContent = location.emoji;
+  document.getElementById('lpName').innerHTML = location.name + ' <span style="font-size:14px;font-weight:400;color:var(--color-text-secondary);">' + location.nameEn + '</span>';
+  document.getElementById('lpCountry').textContent = '🇨🇳 中国 · ' + ({ historical: '名胜古迹', scenic: '自然景观', mythological: '神话修仙' })[location.type] || '';
+  document.getElementById('lpTask').innerHTML = location.task + '<br><span style="font-size:12px;color:var(--color-text-tertiary);">' + location.taskEn + '</span>';
+  document.getElementById('lpFunFact').textContent = '💡 ' + location.funFact + ' | ' + location.funFactEn;
+
+  const btn = document.getElementById('lpCheckinBtn');
+  const status = document.getElementById('lpCheckinStatus');
+
+  if (isVisited) {
+    btn.textContent = '✅ 已打卡';
+    btn.className = 'lp-checkin-btn lp-checkin-btn--done';
+    btn.disabled = true;
+    status.innerHTML = '<span style="color:#34c759;font-weight:700;">✅ 已探索</span>';
+  } else {
+    btn.textContent = '✨ 打卡签到';
+    btn.className = 'lp-checkin-btn';
+    btn.disabled = false;
+    status.innerHTML = '<span style="color:var(--color-text-tertiary);">📍 等待你的到来</span>';
+  }
+
+  btn.onclick = () => {
+    if (!isVisited) { checkInChinaLocation(location); hideLocationPopup(); }
+  };
+
+  popupWrapper.style.display = 'flex';
+}
+
+// ---- China 打卡签到 ----
+function checkInChinaLocation(location) {
+  const chinaSet = getChinaExploredSet();
+  if (chinaSet.has(location.id)) return;
+
+  if (!appState.exploredChinaLocations) appState.exploredChinaLocations = [];
+  appState.exploredChinaLocations.push(location.id);
+  appState.lastExploredDate = getToday();
+  saveState(appState);
+
+  renderFlatMarkers();
+  showCheckinToast(location);
+}
+
 // ---- 打卡提示 ----
 function showCheckinToast(location) {
   const toast = document.createElement('div');
@@ -3729,6 +4099,14 @@ function showExploreView() {
 }
 
 function hideExploreView() {
+  if (chinaMode) {
+    chinaMode = false;
+    if (chinaModeBackBtn) chinaModeBackBtn.style.display = 'none';
+    const chinaTitle = document.getElementById('chinaTitle');
+    if (chinaTitle) chinaTitle.style.display = 'none';
+    exploreBackBtn.style.display = '';
+    updateChinaLegend(false);
+  }
   exploreView.style.display = 'none';
   document.body.style.overflow = '';
 }
