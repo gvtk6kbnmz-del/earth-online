@@ -13,10 +13,21 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
   }
 }
+</script>
+<script>
+// CDN fallback: 如果 jsdelivr 挂了，尝试 unpkg
+window.addEventListener('error', function(e) {
+  if (e.target && e.target.tagName === 'SCRIPT' && e.target.src.includes('jsdelivr')) {
+    var s = document.createElement('script');
+    s.type = 'importmap';
+    s.textContent = '{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}';
+    document.head.appendChild(s);
+  }
+}, true);
 </script>
 <style>
 /* ============================================================
@@ -3676,6 +3687,11 @@ function createGlowTexture() {
 
 // ---- 3D 粒子地球 ----
 function initGlobe() {
+  if (typeof THREE === 'undefined') {
+    globeContainer.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);font-size:14px;flex-direction:column;gap:12px;"><div style="font-size:48px;">🌍</div><div>3D引擎加载失败</div><div style="font-size:12px;color:var(--color-text-tertiary);">请检查网络连接后刷新</div></div>';
+    return;
+  }
+  try {
   globeScene = new THREE.Scene();
   globeCamera = new THREE.PerspectiveCamera(45, globeContainer.clientWidth / globeContainer.clientHeight, 0.1, 50);
   globeCamera.position.set(0, 0, 14);
@@ -3687,6 +3703,10 @@ function initGlobe() {
   createOuterHalo();
   setupGlobeInteraction();
   animateGlobe();
+  } catch(e) {
+    console.error('Globe init error:', e);
+    globeContainer.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);font-size:14px;flex-direction:column;gap:12px;"><div style="font-size:48px;">🌍</div><div>地球渲染失败</div><div style="font-size:12px;color:var(--color-text-tertiary);">请刷新页面重试</div></div>';
+  }
 }
 
 function createParticleGlobe() {
