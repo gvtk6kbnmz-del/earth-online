@@ -10,7 +10,14 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>地球Online · 每日随机挑战</title>
-<!-- Three.js 3D 地球 -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
 <style>
 /* ============================================================
    1. CSS 变量
@@ -1179,6 +1186,35 @@ button:active {
   transform: translate(-50%, -50%);
   pointer-events: none;
   animation: ringReveal 0.4s ease-out forwards;
+}
+
+/* iPhone 风格底部卡片 */
+.bottom-sheet-overlay {
+  position: fixed; inset: 0; z-index: 2100;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: sheetOverlayIn 0.3s ease;
+}
+@keyframes sheetOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+.bottom-sheet {
+  width: 100%; max-width: 480px; max-height: 75vh;
+  background: rgba(22,22,36,0.95);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border: 1px solid rgba(255,255,255,0.12); border-bottom: none;
+  padding: var(--space-lg); padding-bottom: calc(var(--safe-bottom) + var(--space-lg));
+  overflow-y: auto;
+  animation: sheetSlideUp 0.45s cubic-bezier(0.34,1.56,0.64,1);
+  position: relative;
+}
+@keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.bottom-sheet-handle {
+  width: 36px; height: 5px; border-radius: 3px;
+  background: rgba(255,255,255,0.3); margin: 0 auto var(--space-md);
 }
 
 /* 地点详情弹窗 */
@@ -2555,43 +2591,61 @@ button:active {
 <!-- 纸屑画布 -->
 <canvas class="confetti-canvas" id="confettiCanvas" style="display:none;"></canvas>
 
-<!-- 地图探索视图 -->
-<div id="exploreView" class="explore-view" style="display:none;">
-  <!-- 2D 世界地图 -->
-  <div id="mapContainer" class="map-container">
-    <div class="map-wrapper" id="mapWrapper">
-      <div class="map-content" id="mapContent">
-        <img class="map-image" id="mapImage" src="" alt="World Map" draggable="false">
-      </div>
+<!-- GPS 权限引导页 -->
+<div id="gpsPrimer" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,0.6);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;">
+  <div style="max-width:340px;padding:var(--space-xl);text-align:center;background:rgba(22,22,36,0.92);border-radius:var(--radius-lg);border:1px solid rgba(255,255,255,0.08);">
+    <div style="font-size:64px;margin-bottom:var(--space-md);">🌍</div>
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:var(--space-sm);color:#fff;">定位让地球更真实</h2>
+    <p style="font-size:14px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:var(--space-lg);">
+      地球Online 使用你的位置来<br>
+      <span style="color:var(--color-accent-glow);">自动解锁</span>你周围的探索区域
+    </p>
+    <div style="display:flex;gap:var(--space-md);margin-bottom:var(--space-lg);">
+      <div style="flex:1;text-align:center;"><div style="font-size:28px;">📍</div><div style="font-size:11px;color:var(--color-text-tertiary);">附近解锁</div></div>
+      <div style="flex:1;text-align:center;"><div style="font-size:28px;">🔒</div><div style="font-size:11px;color:var(--color-text-tertiary);">仅本地存储</div></div>
+      <div style="flex:1;text-align:center;"><div style="font-size:28px;">⚡</div><div style="font-size:11px;color:var(--color-text-tertiary);">实时更新</div></div>
     </div>
+    <button id="gpsAllowBtn" style="display:block;width:100%;padding:14px;border-radius:var(--radius-md);font-size:16px;font-weight:700;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 4px 20px rgba(99,102,241,0.35);border:none;cursor:pointer;margin-bottom:var(--space-sm);">📍 允许使用位置</button>
+    <button id="gpsDenyBtn" style="font-size:13px;color:var(--color-text-tertiary);background:none;border:none;cursor:pointer;">暂不开启</button>
+  </div>
+</div>
+
+<!-- 3D 粒子地球探索视图 -->
+<div id="exploreView" class="explore-view" style="display:none;">
+  <div id="globeContainer" style="position:absolute;inset:0;z-index:1;"></div>
+  <canvas id="globeCanvas" style="display:none;"></canvas>
+
+  <!-- GPS 状态胶囊 -->
+  <div id="gpsCapsule" style="position:absolute;top:calc(var(--safe-top) + 60px);left:50%;transform:translateX(-50%);z-index:100;display:none;padding:6px 16px;border-radius:var(--radius-pill);background:rgba(20,20,30,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);font-size:12px;font-weight:600;color:var(--color-accent-glow);border:1px solid rgba(99,102,241,0.2);align-items:center;gap:6px;white-space:nowrap;">
+    <span>📍</span>
+    <span id="gpsCapsuleText">已定位</span>
   </div>
 
   <!-- 返回按钮 -->
   <button class="explore-back-btn" id="exploreBackBtn" title="返回">←</button>
 
   <!-- 图例 -->
-  <div class="explore-legend">
+  <div class="explore-legend" id="exploreLegend">
     <span><i class="explore-legend-dot explore-legend-dot--unvisited"></i> 未探索</span>
     <span><i class="explore-legend-dot explore-legend-dot--visited"></i> 已探索</span>
     <span><i class="explore-legend-dot explore-legend-dot--featured"></i> 今日推荐</span>
   </div>
 
-  <!-- 地点详情弹窗 -->
-  <div class="location-popup-wrapper" id="locationPopupWrapper" style="display:none;">
-    <div class="location-popup glass-card" id="locationPopup">
-      <button class="lp-close-btn" id="lpCloseBtn">✕</button>
-      <div class="lp-emoji" id="lpEmoji"></div>
-      <div class="lp-name" id="lpName"></div>
-      <div class="lp-country" id="lpCountry"></div>
-      <div class="lp-divider"></div>
-      <div class="lp-task-label">📋 当地任务</div>
-      <div class="lp-task" id="lpTask"></div>
-      <div class="lp-funfact" id="lpFunFact"></div>
-      <div class="lp-divider"></div>
-      <button class="lp-checkin-btn" id="lpCheckinBtn">
+  <!-- 地点详情底部卡片（iPhone 风格） -->
+  <div class="bottom-sheet-overlay" id="bottomSheetOverlay" style="display:none;">
+    <div class="bottom-sheet glass-card" id="bottomSheet">
+      <div class="bottom-sheet-handle"></div>
+      <div id="bsEmoji" style="font-size:48px;text-align:center;margin-bottom:var(--space-sm);"></div>
+      <h2 id="bsName" style="font-size:22px;font-weight:700;text-align:center;margin-bottom:2px;"></h2>
+      <p id="bsLocation" style="font-size:13px;color:var(--color-text-secondary);text-align:center;margin-bottom:4px;"></p>
+      <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);margin:var(--space-md) 0;"></div>
+      <div style="font-size:11px;color:var(--color-text-tertiary);font-weight:600;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px;">📋 当地任务</div>
+      <p id="bsTask" style="font-size:15px;font-weight:600;margin-bottom:var(--space-sm);line-height:1.5;"></p>
+      <p id="bsFunFact" style="font-size:12px;color:var(--color-accent-glow);font-style:italic;margin-bottom:var(--space-lg);"></p>
+      <button id="bsCheckinBtn" style="width:100%;padding:14px;border-radius:var(--radius-md);font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 20px rgba(99,102,241,0.35);border:none;cursor:pointer;letter-spacing:0.5px;">
         ✨ 打卡签到
       </button>
-      <p class="lp-checkin-status" id="lpCheckinStatus"></p>
+      <p id="bsStatus" style="font-size:12px;color:var(--color-text-secondary);text-align:center;margin-top:8px;"></p>
     </div>
   </div>
 </div>
@@ -2810,66 +2864,78 @@ button:active {
   </div>
 </div>
 
-<script>
+<script type="module">
+import * as THREE from 'three';
 /* ============================================================
    1. 常量 & 任务数据池
    ============================================================ */
 /* ============================================================
    0. 全球任务地点数据
    ============================================================ */
-const WORLD_LOCATIONS = [
-  { id: 'tokyo',     name: '东京',   country: '日本',     emoji: '🗼', lat: 35.6762,  lng: 139.6503, task: '在涩谷十字路口准时穿越一次',                   continent: 'asia',     difficulty: 2, funFact: '涩谷十字路口每分钟约有3000人通过' },
-  { id: 'beijing',   name: '北京',   country: '中国',     emoji: '🏯', lat: 39.9042,  lng: 116.4074, task: '在故宫找到一只石狮子并合影',                     continent: 'asia',     difficulty: 2, funFact: '故宫有超过8700间房间' },
-  { id: 'bangkok',   name: '曼谷',   country: '泰国',     emoji: '🛕', lat: 13.7563,  lng: 100.5018, task: '在街头买一份芒果糯米饭',                         continent: 'asia',     difficulty: 1, funFact: '曼谷全名是世界最长的城市名称，共168个字母' },
-  { id: 'dubai',     name: '迪拜',   country: '阿联酋',   emoji: '🏙️', lat: 25.2048,  lng: 55.2708,  task: '想象自己站在哈利法塔顶端俯瞰',                   continent: 'asia',     difficulty: 1, funFact: '哈利法塔高828米，是世界最高建筑' },
-  { id: 'paris',     name: '巴黎',   country: '法国',     emoji: '🗼', lat: 48.8566,  lng: 2.3522,   task: '在埃菲尔铁塔前做一个优雅的姿势',                 continent: 'europe',   difficulty: 1, funFact: '埃菲尔铁塔每年会长高约15厘米（热胀冷缩）' },
-  { id: 'london',    name: '伦敦',   country: '英国',     emoji: '🎡', lat: 51.5074,  lng: -0.1278,  task: '学一句地道的英式口音"Mind the gap"',              continent: 'europe',   difficulty: 1, funFact: '伦敦地铁是世界上最早的地下铁路系统' },
-  { id: 'rome',      name: '罗马',   country: '意大利',   emoji: '🏛️', lat: 41.9028,  lng: 12.4964,  task: '吃一口正宗的意大利面并发出"mmm"声',               continent: 'europe',   difficulty: 1, funFact: '罗马许愿池每天能收到约3000欧元的硬币' },
-  { id: 'moscow',    name: '莫斯科', country: '俄罗斯',   emoji: '⛪', lat: 55.7558,  lng: 37.6173,  task: '在寒冷中喝一杯热巧克力并呼出白雾',               continent: 'europe',   difficulty: 2, funFact: '莫斯科地铁站被称作"地下宫殿"' },
-  { id: 'newyork',   name: '纽约',   country: '美国',     emoji: '🗽', lat: 40.7128,  lng: -74.0060, task: '在中央公园喂一次鸽子',                           continent: 'americas', difficulty: 1, funFact: '纽约中央公园面积比摩纳哥公国还大' },
-  { id: 'rio',       name: '里约',   country: '巴西',     emoji: '⛰️', lat: -22.9068, lng: -43.1729, task: '对着基督像张开双臂拍一张',                       continent: 'americas', difficulty: 2, funFact: '里约基督救世主像高30米，臂展28米' },
-  { id: 'mexico',    name: '墨西哥城', country: '墨西哥', emoji: '🌮', lat: 19.4326,  lng: -99.1332, task: '咬一口墨西哥卷饼并感叹"¡Qué rico!"',             continent: 'americas', difficulty: 1, funFact: '墨西哥城建立在古代特诺奇提特兰遗址之上' },
-  { id: 'cairo',     name: '开罗',   country: '埃及',     emoji: '🔺', lat: 30.0444,  lng: 31.2357,  task: '想象自己骑着骆驼穿越金字塔',                     continent: 'africa',   difficulty: 3, funFact: '胡夫金字塔建成时，猛犸象还活着' },
-  { id: 'capetown',  name: '开普敦', country: '南非',     emoji: '🦁', lat: -33.9249, lng: 18.4241,  task: '在桌山上拍一张云海照片',                         continent: 'africa',   difficulty: 3, funFact: '桌山是世界上最古老的山峰之一，已有2.6亿年' },
-  { id: 'sydney',    name: '悉尼',   country: '澳大利亚', emoji: '🦘', lat: -33.8688, lng: 151.2093, task: '在歌剧院前跳一支袋鼠舞',                           continent: 'oceania',  difficulty: 2, funFact: '悉尼歌剧院的屋顶由超过100万块瓷砖铺成' },
-  { id: 'auckland',  name: '奥克兰', country: '新西兰',   emoji: '🥝', lat: -36.8485, lng: 174.7633, task: '学一句毛利语"Kia Ora"并录下来',                continent: 'oceania',  difficulty: 2, funFact: '新西兰有3000万只羊，是人口的6倍' },
-  { id: 'reykjavik', name: '雷克雅未克', country: '冰岛', emoji: '🌋', lat: 64.1466,  lng: -21.9426, task: '看一段极光视频并发出一声"哇"',                   continent: 'europe',   difficulty: 1, funFact: '冰岛有130多座火山，其中30座是活火山' },
-  { id: 'sahara',    name: '撒哈拉', country: '北非',     emoji: '🏜️', lat: 23.4162,  lng: 25.6628,  task: '在想象的沙漠中数三颗星星',                         continent: 'africa',   difficulty: 1, funFact: '撒哈拉沙漠的面积比整个美国还要大' },
-  { id: 'santiago',  name: '圣地亚哥', country: '智利',   emoji: '🗿', lat: -33.4489, lng: -70.6693, task: '模仿复活节岛石像的表情坚持10秒',                   continent: 'americas', difficulty: 2, funFact: '复活节岛上有887尊摩艾石像' },
-];
+// ====== 统一全球地点池 GLOBAL_LOCATIONS ======
+// 字段: id, name, nameEn, country, countryEn, emoji, lat, lng, continent, category, difficulty,
+//       task, taskEn, funFact, funFactEn, startVisible, unlockType, unlockRadius, revealRadius, chainCount
+const GLOBAL_LOCATIONS = [
+  // ========== 新手村（startVisible: true）==========
+  { id:'beijing', name:'北京', nameEn:'Beijing', country:'中国', countryEn:'China', emoji:'🏯', lat:39.9042, lng:116.4074, continent:'asia', category:'world', difficulty:2, task:'在故宫找到一只石狮子并合影', taskEn:'Find a stone lion in the Forbidden City and take a selfie', funFact:'故宫有超过8700间房间', funFactEn:'The Forbidden City has over 8,700 rooms', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:800, chainCount:3 },
+  { id:'tokyo', name:'东京', nameEn:'Tokyo', country:'日本', countryEn:'Japan', emoji:'🗼', lat:35.6762, lng:139.6503, continent:'asia', category:'world', difficulty:2, task:'在涩谷十字路口准时穿越一次', taskEn:'Cross Shibuya Crossing at the exact moment the light turns green', funFact:'涩谷十字路口每分钟约有3000人通过', funFactEn:'About 3,000 people cross Shibuya Crossing every minute', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'newyork', name:'纽约', nameEn:'New York', country:'美国', countryEn:'USA', emoji:'🗽', lat:40.7128, lng:-74.0060, continent:'americas', category:'world', difficulty:1, task:'在中央公园喂一次鸽子', taskEn:'Feed the pigeons in Central Park', funFact:'纽约中央公园面积比摩纳哥公国还大', funFactEn:'Central Park is larger than the entire country of Monaco', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'paris', name:'巴黎', nameEn:'Paris', country:'法国', countryEn:'France', emoji:'🗼', lat:48.8566, lng:2.3522, continent:'europe', category:'world', difficulty:1, task:'在埃菲尔铁塔前做一个优雅的姿势', taskEn:'Strike an elegant pose in front of the Eiffel Tower', funFact:'埃菲尔铁塔每年会长高约15厘米（热胀冷缩）', funFactEn:'The Eiffel Tower grows about 15cm every year due to thermal expansion', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'sydney', name:'悉尼', nameEn:'Sydney', country:'澳大利亚', countryEn:'Australia', emoji:'🦘', lat:-33.8688, lng:151.2093, continent:'oceania', category:'world', difficulty:2, task:'在歌剧院前跳一支袋鼠舞', taskEn:'Do a kangaroo dance in front of the Opera House', funFact:'悉尼歌剧院的屋顶由超过100万块瓷砖铺成', funFactEn:'The Sydney Opera House roof is covered by over 1 million tiles', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:800, chainCount:2 },
 
-// ---- 中国子地点（中英双语） ----
-const CHINA_LOCATIONS = [
-  // ===== 名胜古迹 Historical Sites =====
-  { id: 'greatwall',     name: '万里长城',     nameEn: 'The Great Wall',         emoji: '🧱', lat: 40.4319, lng: 116.5704, type: 'historical',  task: '在长城上走一段并数一数烽火台',             taskEn: 'Walk along the Great Wall and count the watchtowers',           difficulty: 2, funFact: '长城总长度超过21000公里，可绕地球半圈',   funFactEn: 'The Great Wall stretches over 21,000 km — half the Earth\'s circumference' },
-  { id: 'terracotta',    name: '兵马俑',       nameEn: 'Terracotta Warriors',     emoji: '🗿', lat: 34.3852, lng: 109.2731, type: 'historical',  task: '观察兵马俑的面部表情，找到最独特的那一个',   taskEn: 'Find the warrior with the most unique facial expression',        difficulty: 1, funFact: '每个兵马俑的面部都是独一无二的艺术品',     funFactEn: 'Every Terracotta Warrior has a one-of-a-kind face' },
-  { id: 'mogao',         name: '莫高窟',       nameEn: 'Mogao Caves',             emoji: '🪷', lat: 40.0411, lng: 94.8086,  type: 'historical',  task: '想象自己在壁画飞天中穿梭',                   taskEn: 'Imagine soaring through the celestial flying apsaras',          difficulty: 2, funFact: '莫高窟现存735个洞窟，壁画45000平方米',      funFactEn: 'Mogao has 735 caves with 45,000 m² of murals' },
-  { id: 'longmen',       name: '龙门石窟',     nameEn: 'Longmen Grottoes',        emoji: '🙏', lat: 34.5619, lng: 112.4691, type: 'historical',  task: '仰望卢舍那大佛，感受千年前的注视',           taskEn: 'Gaze up at the 17-meter Vairocana Buddha',                      difficulty: 1, funFact: '卢舍那大佛高17.14米，仅耳朵就达1.9米',     funFactEn: 'The Vairocana Buddha is 17.14m tall, ears alone are 1.9m' },
-  { id: 'pingyao',       name: '平遥古城',     nameEn: 'Pingyao Ancient City',    emoji: '🏘️',  lat: 37.2019, lng: 112.1766, type: 'historical',  task: '在古城墙上走一圈，感受明清时光',             taskEn: 'Walk the ancient walls through Ming-Qing history',               difficulty: 1, funFact: '平遥古城完整保存了明清时期县城格局',         funFactEn: 'Pingyao perfectly preserves the Ming-Qing county layout' },
-  { id: 'potala',        name: '布达拉宫',     nameEn: 'Potala Palace',           emoji: '🏰',  lat: 29.6573, lng: 91.1172,  type: 'historical',  task: '在世界最高的宫殿前双手合十',                 taskEn: 'Press your palms together at the world\'s highest palace',       difficulty: 3, funFact: '布达拉宫海拔3700米，拥有1000多间房间',       funFactEn: 'Potala Palace sits at 3,700m with over 1,000 rooms' },
-  { id: 'forbidden',     name: '故宫',         nameEn: 'Forbidden City',          emoji: '🏯',  lat: 39.9163, lng: 116.3972, type: 'historical',  task: '在太和殿前想象百官朝拜的盛大场面',           taskEn: 'Imagine the imperial court at the Hall of Supreme Harmony',      difficulty: 1, funFact: '故宫有8707间房间，是世界上最大的宫殿群',     funFactEn: 'The Forbidden City has 8,707 rooms, the world\'s largest palace complex' },
-  { id: 'temple_heaven', name: '天坛',         nameEn: 'Temple of Heaven',        emoji: '⛩️',  lat: 39.8822, lng: 116.4066, type: 'historical',  task: '在回音壁前轻声说一句心里话',                 taskEn: 'Whisper a secret at the Echo Wall',                              difficulty: 1, funFact: '天坛回音壁能传声百米，古人的声学奇迹',       funFactEn: 'The Echo Wall transmits whispers over 100 meters' },
+  // ========== 亚洲 - 世界 ==========
+  { id:'bangkok', name:'曼谷', nameEn:'Bangkok', country:'泰国', countryEn:'Thailand', emoji:'🛕', lat:13.7563, lng:100.5018, continent:'asia', category:'world', difficulty:1, task:'在街头买一份芒果糯米饭', taskEn:'Buy a mango sticky rice from a street vendor', funFact:'曼谷全名是世界最长的城市名称，共168个字母', funFactEn:'Bangkok\'s full ceremonial name is the longest city name in the world at 168 letters', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'dubai', name:'迪拜', nameEn:'Dubai', country:'阿联酋', countryEn:'UAE', emoji:'🏙️', lat:25.2048, lng:55.2708, continent:'asia', category:'world', difficulty:1, task:'想象自己站在哈利法塔顶端俯瞰', taskEn:'Imagine standing atop the Burj Khalifa looking down', funFact:'哈利法塔高828米，是世界最高建筑', funFactEn:'The Burj Khalifa stands 828m tall, the world\'s tallest building', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:1 },
 
-  // ===== 自然景观 Scenic Spots =====
-  { id: 'huangshan',     name: '黄山',         nameEn: 'Yellow Mountain',         emoji: '⛰️',  lat: 30.1344, lng: 118.1689, type: 'scenic',      task: '在云海中拍一张迎客松',                       taskEn: 'Photograph the Welcoming Pine in a sea of clouds',              difficulty: 2, funFact: '黄山被列入世界文化与自然双遗产名录',         funFactEn: 'Yellow Mountain is a UNESCO World Heritage Site' },
-  { id: 'zhangjiajie',   name: '张家界',       nameEn: 'Zhangjiajie',             emoji: '🏔️',  lat: 29.3373, lng: 110.4792, type: 'scenic',      task: '在悬浮山之间寻找阿凡达的踪迹',               taskEn: 'Hunt for Avatar traces among the floating peaks',               difficulty: 2, funFact: '张家界的石英砂岩峰林启发了电影《阿凡达》',   funFactEn: 'Zhangjiajie\'s sandstone pillars inspired Avatar\'s floating mountains' },
-  { id: 'jiuzhaigou',    name: '九寨沟',       nameEn: 'Jiuzhaigou Valley',       emoji: '🏞️',  lat: 33.2624, lng: 103.9176, type: 'scenic',      task: '数一数五花海有几种颜色',                     taskEn: 'Count how many colors ripple in Five-Flower Lake',              difficulty: 1, funFact: '九寨沟有114个湖泊，人称"人间瑶池"',        funFactEn: 'Jiuzhaigou has 114 crystal-clear lakes, known as "Heaven on Earth"' },
-  { id: 'guilin',        name: '桂林山水',     nameEn: 'Guilin Karst',            emoji: '🎋',  lat: 25.2736, lng: 110.2900, type: 'scenic',      task: '在漓江边拍一张山水倒影',                     taskEn: 'Capture the karst peaks mirrored in the Li River',              difficulty: 1, funFact: '桂林山水是20元人民币背面的图案',             funFactEn: 'Guilin\'s scenery graces the back of China\'s 20 RMB note' },
-  { id: 'westlake',      name: '西湖',         nameEn: 'West Lake',               emoji: '🌊',  lat: 30.2417, lng: 120.1473, type: 'scenic',      task: '在断桥边吟一句"欲把西湖比西子"',           taskEn: 'Recite an ancient poem by the Broken Bridge',                   difficulty: 1, funFact: '西湖十景，每一景都有千年传说',               funFactEn: 'West Lake\'s "Ten Scenes" each hold a millennial legend' },
-  { id: 'changbaishan',  name: '长白山天池',   nameEn: 'Heavenly Lake',           emoji: '🌋',  lat: 41.9961, lng: 128.0614, type: 'scenic',      task: '在火山口湖前许一个愿望',                     taskEn: 'Make a wish before the volcanic crater lake',                   difficulty: 2, funFact: '天池是中国最深的湖泊，深达373米',            funFactEn: 'Heavenly Lake is China\'s deepest at 373 meters' },
-  { id: 'tianshan',      name: '天山天池',     nameEn: 'Tianshan Tianchi',        emoji: '💎',  lat: 43.8853, lng: 88.1318,  type: 'scenic',      task: '在西王母的瑶池边寻找仙踪',                   taskEn: 'Seek the Queen Mother\'s traces by the legendary jade pool',    difficulty: 2, funFact: '传说天山天池就是神话中的西王母瑶池',         funFactEn: 'Legend says this is the Jade Pool of the Queen Mother of the West' },
+  // ========== 欧洲 - 世界 ==========
+  { id:'london', name:'伦敦', nameEn:'London', country:'英国', countryEn:'UK', emoji:'🎡', lat:51.5074, lng:-0.1278, continent:'europe', category:'world', difficulty:1, task:'学一句地道的英式口音"Mind the gap"', taskEn:'Say "Mind the gap" in your best British accent', funFact:'伦敦地铁是世界上最早的地下铁路系统', funFactEn:'The London Underground is the world\'s oldest subway system', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'rome', name:'罗马', nameEn:'Rome', country:'意大利', countryEn:'Italy', emoji:'🏛️', lat:41.9028, lng:12.4964, continent:'europe', category:'world', difficulty:1, task:'吃一口正宗的意大利面并发出"mmm"声', taskEn:'Take a bite of authentic pasta and say "mmm"', funFact:'罗马许愿池每天能收到约3000欧元的硬币', funFactEn:'The Trevi Fountain collects about €3,000 in coins every day', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'moscow', name:'莫斯科', nameEn:'Moscow', country:'俄罗斯', countryEn:'Russia', emoji:'⛪', lat:55.7558, lng:37.6173, continent:'europe', category:'world', difficulty:2, task:'在寒冷中喝一杯热巧克力并呼出白雾', taskEn:'Drink hot chocolate in the cold and breathe out white mist', funFact:'莫斯科地铁站被称作"地下宫殿"', funFactEn:'Moscow metro stations are called "underground palaces"', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:1 },
+  { id:'reykjavik', name:'雷克雅未克', nameEn:'Reykjavik', country:'冰岛', countryEn:'Iceland', emoji:'🌋', lat:64.1466, lng:-21.9426, continent:'europe', category:'world', difficulty:1, task:'看一段极光视频并发出一声"哇"', taskEn:'Watch an aurora video and let out a "wow"', funFact:'冰岛有130多座火山，其中30座是活火山', funFactEn:'Iceland has over 130 volcanoes, 30 of which are active', startVisible:false, unlockType:'gps', unlockRadius:500, revealRadius:800, chainCount:2 },
 
-  // ===== 神话修仙地 Mythological Places =====
-  { id: 'kunlun',        name: '昆仑山',       nameEn: 'Kunlun Mountains',        emoji: '🐉',  lat: 35.9792, lng: 80.2320,  type: 'mythological', task: '想象元始天尊在昆仑虚开坛讲道',            taskEn: 'Imagine the Primordial Lord of Heaven preaching at Kunlun',     difficulty: 3, funFact: '昆仑山在中国神话中是"万山之祖"，仙人居所', funFactEn: 'Kunlun is the "Ancestor of Mountains" and abode of immortals' },
-  { id: 'penglai',       name: '蓬莱仙岛',     nameEn: 'Penglai Fairyland',       emoji: '🏝️',  lat: 37.8223, lng: 120.7525, type: 'mythological', task: '在海市蜃楼中寻找八仙的踪迹',              taskEn: 'Seek the Eight Immortals crossing the sea in the mirage',       difficulty: 1, funFact: '蓬莱是传说中八仙过海、各显神通的地方',       funFactEn: 'Penglai is where the Eight Immortals displayed their powers' },
-  { id: 'emei',          name: '峨眉山',       nameEn: 'Mount Emei',              emoji: '☁️',  lat: 29.5647, lng: 103.3473, type: 'mythological', task: '在金顶看一次神秘庄严的佛光',              taskEn: 'Witness the sacred Buddha\'s Light at the Golden Summit',       difficulty: 2, funFact: '峨眉山是普贤菩萨道场，佛教四大名山之一',      funFactEn: 'Mount Emei is the bodhimanda of Samantabhadra Bodhisattva' },
-  { id: 'wudang',        name: '武当山',       nameEn: 'Wudang Mountains',        emoji: '⚔️',  lat: 32.3999, lng: 111.0067, type: 'mythological', task: '在紫霄宫前缓缓打一套太极拳',              taskEn: 'Practice Tai Chi slowly before the Purple Cloud Temple',        difficulty: 2, funFact: '武当山是张三丰创立太极拳的圣地',             funFactEn: 'Wudang is the sacred birthplace of Tai Chi by Zhang Sanfeng' },
-  { id: 'taishan',       name: '泰山',         nameEn: 'Mount Tai',               emoji: '🌄',  lat: 36.2564, lng: 117.0944, type: 'mythological', task: '在玉皇顶迎接第一缕日出',                  taskEn: 'Greet the first sunrise from the Jade Emperor Peak',             difficulty: 2, funFact: '泰山为五岳之首，历代72位皇帝在此封禅',        funFactEn: 'Mount Tai is chief of Five Sacred Mountains, 72 emperors performed rites here' },
+  // ========== 美洲 - 世界 ==========
+  { id:'rio', name:'里约', nameEn:'Rio', country:'巴西', countryEn:'Brazil', emoji:'⛰️', lat:-22.9068, lng:-43.1729, continent:'americas', category:'world', difficulty:2, task:'对着基督像张开双臂拍一张', taskEn:'Open your arms wide before Christ the Redeemer', funFact:'里约基督救世主像高30米，臂展28米', funFactEn:'Christ the Redeemer stands 30m tall with a 28m arm span', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'mexico', name:'墨西哥城', nameEn:'Mexico City', country:'墨西哥', countryEn:'Mexico', emoji:'🌮', lat:19.4326, lng:-99.1332, continent:'americas', category:'world', difficulty:1, task:'咬一口墨西哥卷饼并感叹"¡Qué rico!"', taskEn:'Bite into a taco and exclaim "¡Qué rico!"', funFact:'墨西哥城建立在古代特诺奇提特兰遗址之上', funFactEn:'Mexico City was built on the ruins of the ancient Tenochtitlan', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'santiago', name:'圣地亚哥', nameEn:'Santiago', country:'智利', countryEn:'Chile', emoji:'🗿', lat:-33.4489, lng:-70.6693, continent:'americas', category:'world', difficulty:2, task:'模仿复活节岛石像的表情坚持10秒', taskEn:'Hold a Moai statue face for 10 seconds', funFact:'复活节岛上有887尊摩艾石像', funFactEn:'There are 887 Moai statues on Easter Island', startVisible:false, unlockType:'virtual', unlockRadius:500, revealRadius:800, chainCount:1 },
 
-  // ===== 现代地标 Modern Landmarks =====
-  { id: 'shanghai_bund', name: '上海外滩',     nameEn: 'The Bund',                emoji: '🌃',  lat: 31.2359, lng: 121.4920, type: 'scenic',      task: '在外滩拍一张浦东摩天大楼的天际线',           taskEn: 'Capture the stunning Pudong skyline from the Bund',             difficulty: 1, funFact: '外滩有"万国建筑博览群"之称，52幢风格各异',  funFactEn: 'The Bund is a "Gallery of World Architecture" with 52 unique buildings' },
-  { id: 'canton_tower',  name: '广州塔',       nameEn: 'Canton Tower',            emoji: '🗼',  lat: 23.1065, lng: 113.3245, type: 'scenic',      task: '在"小蛮腰"下仰望600米的高空',              taskEn: 'Gaze up 600 meters at China\'s "Slim Waist"',                  difficulty: 1, funFact: '广州塔高600米，是中国第一高塔',               funFactEn: 'Canton Tower stands 600m tall, the highest TV tower in China' },
-  { id: 'hongyadong',    name: '洪崖洞',       nameEn: 'Hongya Cave',             emoji: '🏮',  lat: 29.5630, lng: 106.5831, type: 'scenic',      task: '在层层叠叠的灯笼下拍一张魔幻夜景',           taskEn: 'Take a magical photo under cascading red lanterns',             difficulty: 1, funFact: '洪崖洞被称为现实版"千与千寻"汤屋',         funFactEn: 'Hongya Cave is called the real-life "Spirited Away" bathhouse' },
+  // ========== 非洲 - 世界 ==========
+  { id:'cairo', name:'开罗', nameEn:'Cairo', country:'埃及', countryEn:'Egypt', emoji:'🔺', lat:30.0444, lng:31.2357, continent:'africa', category:'world', difficulty:3, task:'想象自己骑着骆驼穿越金字塔', taskEn:'Imagine riding a camel across the pyramids', funFact:'胡夫金字塔建成时，猛犸象还活着', funFactEn:'Woolly mammoths were still alive when the Great Pyramid was built', startVisible:false, unlockType:'virtual', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'capetown', name:'开普敦', nameEn:'Cape Town', country:'南非', countryEn:'South Africa', emoji:'🦁', lat:-33.9249, lng:18.4241, continent:'africa', category:'world', difficulty:3, task:'在桌山上拍一张云海照片', taskEn:'Photograph the sea of clouds from Table Mountain', funFact:'桌山是世界上最古老的山峰之一，已有2.6亿年', funFactEn:'Table Mountain is one of the world\'s oldest mountains at 260 million years', startVisible:false, unlockType:'virtual', unlockRadius:500, revealRadius:800, chainCount:1 },
+  { id:'sahara', name:'撒哈拉', nameEn:'Sahara', country:'北非', countryEn:'North Africa', emoji:'🏜️', lat:23.4162, lng:25.6628, continent:'africa', category:'world', difficulty:1, task:'在想象的沙漠中数三颗星星', taskEn:'Count three stars in the imaginary desert sky', funFact:'撒哈拉沙漠的面积比整个美国还要大', funFactEn:'The Sahara Desert is larger than the entire United States', startVisible:false, unlockType:'gps', unlockRadius:500, revealRadius:800, chainCount:1 },
+
+  // ========== 大洋洲 - 世界 ==========
+  { id:'auckland', name:'奥克兰', nameEn:'Auckland', country:'新西兰', countryEn:'New Zealand', emoji:'🥝', lat:-36.8485, lng:174.7633, continent:'oceania', category:'world', difficulty:2, task:'学一句毛利语"Kia Ora"并录下来', taskEn:'Learn to say "Kia Ora" in Māori and record it', funFact:'新西兰有3000万只羊，是人口的6倍', funFactEn:'New Zealand has 30 million sheep, 6 times the human population', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:1 },
+
+  // ========== 中国 - 名胜古迹 ==========
+  { id:'greatwall', name:'万里长城', nameEn:'The Great Wall', country:'中国', countryEn:'China', emoji:'🧱', lat:40.4319, lng:116.5704, continent:'asia', category:'china', difficulty:2, task:'在长城上走一段并数一数烽火台', taskEn:'Walk along the Great Wall and count the watchtowers', funFact:'长城总长度超过21000公里，可绕地球半圈', funFactEn:'The Great Wall stretches over 21,000 km — half the Earth\'s circumference', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:3 },
+  { id:'terracotta', name:'兵马俑', nameEn:'Terracotta Warriors', country:'中国', countryEn:'China', emoji:'🗿', lat:34.3852, lng:109.2731, continent:'asia', category:'china', difficulty:1, task:'观察兵马俑的面部表情，找到最独特的那一个', taskEn:'Find the warrior with the most unique facial expression', funFact:'每个兵马俑的面部都是独一无二的艺术品', funFactEn:'Every Terracotta Warrior has a one-of-a-kind face', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'mogao', name:'莫高窟', nameEn:'Mogao Caves', country:'中国', countryEn:'China', emoji:'🪷', lat:40.0411, lng:94.8086, continent:'asia', category:'china', difficulty:2, task:'想象自己在壁画飞天中穿梭', taskEn:'Imagine soaring through the celestial flying apsaras', funFact:'莫高窟现存735个洞窟，壁画45000平方米', funFactEn:'Mogao has 735 caves with 45,000 m² of murals', startVisible:false, unlockType:'virtual', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'longmen', name:'龙门石窟', nameEn:'Longmen Grottoes', country:'中国', countryEn:'China', emoji:'🙏', lat:34.5619, lng:112.4691, continent:'asia', category:'china', difficulty:1, task:'仰望卢舍那大佛，感受千年前的注视', taskEn:'Gaze up at the 17-meter Vairocana Buddha', funFact:'卢舍那大佛高17.14米，仅耳朵就达1.9米', funFactEn:'The Vairocana Buddha is 17.14m tall, ears alone are 1.9m', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'pingyao', name:'平遥古城', nameEn:'Pingyao Ancient City', country:'中国', countryEn:'China', emoji:'🏘️', lat:37.2019, lng:112.1766, continent:'asia', category:'china', difficulty:1, task:'在古城墙上走一圈，感受明清时光', taskEn:'Walk the ancient walls through Ming-Qing history', funFact:'平遥古城完整保存了明清时期县城格局', funFactEn:'Pingyao perfectly preserves the Ming-Qing county layout', startVisible:false, unlockType:'virtual', unlockRadius:500, revealRadius:800, chainCount:1 },
+  { id:'potala', name:'布达拉宫', nameEn:'Potala Palace', country:'中国', countryEn:'China', emoji:'🏰', lat:29.6573, lng:91.1172, continent:'asia', category:'china', difficulty:3, task:'在世界最高的宫殿前双手合十', taskEn:'Press your palms together at the world\'s highest palace', funFact:'布达拉宫海拔3700米，拥有1000多间房间', funFactEn:'Potala Palace sits at 3,700m with over 1,000 rooms', startVisible:false, unlockType:'gps', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'forbidden', name:'故宫', nameEn:'Forbidden City', country:'中国', countryEn:'China', emoji:'🏯', lat:39.9163, lng:116.3972, continent:'asia', category:'china', difficulty:1, task:'在太和殿前想象百官朝拜的盛大场面', taskEn:'Imagine the imperial court at the Hall of Supreme Harmony', funFact:'故宫有8707间房间，是世界上最大的宫殿群', funFactEn:'The Forbidden City has 8,707 rooms, the world\'s largest palace complex', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'temple_heaven', name:'天坛', nameEn:'Temple of Heaven', country:'中国', countryEn:'China', emoji:'⛩️', lat:39.8822, lng:116.4066, continent:'asia', category:'china', difficulty:1, task:'在回音壁前轻声说一句心里话', taskEn:'Whisper a secret at the Echo Wall', funFact:'天坛回音壁能传声百米，古人的声学奇迹', funFactEn:'The Echo Wall transmits whispers over 100 meters', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:1 },
+
+  // ========== 中国 - 自然景观 ==========
+  { id:'huangshan', name:'黄山', nameEn:'Yellow Mountain', country:'中国', countryEn:'China', emoji:'⛰️', lat:30.1344, lng:118.1689, continent:'asia', category:'china', difficulty:2, task:'在云海中拍一张迎客松', taskEn:'Photograph the Welcoming Pine in a sea of clouds', funFact:'黄山被列入世界文化与自然双遗产名录', funFactEn:'Yellow Mountain is a UNESCO World Heritage Site', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'zhangjiajie', name:'张家界', nameEn:'Zhangjiajie', country:'中国', countryEn:'China', emoji:'🏔️', lat:29.3373, lng:110.4792, continent:'asia', category:'china', difficulty:2, task:'在悬浮山之间寻找阿凡达的踪迹', taskEn:'Hunt for Avatar traces among the floating peaks', funFact:'张家界的石英砂岩峰林启发了电影《阿凡达》', funFactEn:'Zhangjiajie\'s sandstone pillars inspired Avatar\'s floating mountains', startVisible:false, unlockType:'virtual', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'jiuzhaigou', name:'九寨沟', nameEn:'Jiuzhaigou Valley', country:'中国', countryEn:'China', emoji:'🏞️', lat:33.2624, lng:103.9176, continent:'asia', category:'china', difficulty:1, task:'数一数五花海有几种颜色', taskEn:'Count how many colors ripple in Five-Flower Lake', funFact:'九寨沟有114个湖泊，人称"人间瑶池"', funFactEn:'Jiuzhaigou has 114 crystal-clear lakes, known as "Heaven on Earth"', startVisible:false, unlockType:'virtual', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'guilin', name:'桂林山水', nameEn:'Guilin Karst', country:'中国', countryEn:'China', emoji:'🎋', lat:25.2736, lng:110.2900, continent:'asia', category:'china', difficulty:1, task:'在漓江边拍一张山水倒影', taskEn:'Capture the karst peaks mirrored in the Li River', funFact:'桂林山水是20元人民币背面的图案', funFactEn:'Guilin\'s scenery graces the back of China\'s 20 RMB note', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'westlake', name:'西湖', nameEn:'West Lake', country:'中国', countryEn:'China', emoji:'🌊', lat:30.2417, lng:120.1473, continent:'asia', category:'china', difficulty:1, task:'在断桥边吟一句"欲把西湖比西子"', taskEn:'Recite an ancient poem by the Broken Bridge', funFact:'西湖十景，每一景都有千年传说', funFactEn:'West Lake\'s "Ten Scenes" each hold a millennial legend', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:1 },
+  { id:'changbaishan', name:'长白山天池', nameEn:'Heavenly Lake', country:'中国', countryEn:'China', emoji:'🌋', lat:41.9961, lng:128.0614, continent:'asia', category:'china', difficulty:2, task:'在火山口湖前许一个愿望', taskEn:'Make a wish before the volcanic crater lake', funFact:'天池是中国最深的湖泊，深达373米', funFactEn:'Heavenly Lake is China\'s deepest at 373 meters', startVisible:false, unlockType:'gps', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'tianshan', name:'天山天池', nameEn:'Tianshan Tianchi', country:'中国', countryEn:'China', emoji:'💎', lat:43.8853, lng:88.1318, continent:'asia', category:'china', difficulty:2, task:'在西王母的瑶池边寻找仙踪', taskEn:'Seek the Queen Mother\'s traces by the legendary jade pool', funFact:'传说天山天池就是神话中的西王母瑶池', funFactEn:'Legend says this is the Jade Pool of the Queen Mother of the West', startVisible:false, unlockType:'gps', unlockRadius:500, revealRadius:800, chainCount:1 },
+
+  // ========== 中国 - 神话修仙地 ==========
+  { id:'kunlun', name:'昆仑山', nameEn:'Kunlun Mountains', country:'中国', countryEn:'China', emoji:'🐉', lat:35.9792, lng:80.2320, continent:'asia', category:'china', difficulty:3, task:'想象元始天尊在昆仑虚开坛讲道', taskEn:'Imagine the Primordial Lord of Heaven preaching at Kunlun', funFact:'昆仑山在中国神话中是"万山之祖"，仙人居所', funFactEn:'Kunlun is the "Ancestor of Mountains" and abode of immortals', startVisible:false, unlockType:'virtual', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'penglai', name:'蓬莱仙岛', nameEn:'Penglai Fairyland', country:'中国', countryEn:'China', emoji:'🏝️', lat:37.8223, lng:120.7525, continent:'asia', category:'china', difficulty:1, task:'在海市蜃楼中寻找八仙的踪迹', taskEn:'Seek the Eight Immortals crossing the sea in the mirage', funFact:'蓬莱是传说中八仙过海、各显神通的地方', funFactEn:'Penglai is where the Eight Immortals displayed their powers', startVisible:false, unlockType:'virtual', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'emei', name:'峨眉山', nameEn:'Mount Emei', country:'中国', countryEn:'China', emoji:'☁️', lat:29.5647, lng:103.3473, continent:'asia', category:'china', difficulty:2, task:'在金顶看一次神秘庄严的佛光', taskEn:'Witness the sacred Buddha\'s Light at the Golden Summit', funFact:'峨眉山是普贤菩萨道场，佛教四大名山之一', funFactEn:'Mount Emei is the bodhimanda of Samantabhadra Bodhisattva', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'wudang', name:'武当山', nameEn:'Wudang Mountains', country:'中国', countryEn:'China', emoji:'⚔️', lat:32.3999, lng:111.0067, continent:'asia', category:'china', difficulty:2, task:'在紫霄宫前缓缓打一套太极拳', taskEn:'Practice Tai Chi slowly before the Purple Cloud Temple', funFact:'武当山是张三丰创立太极拳的圣地', funFactEn:'Wudang is the sacred birthplace of Tai Chi by Zhang Sanfeng', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'taishan', name:'泰山', nameEn:'Mount Tai', country:'中国', countryEn:'China', emoji:'🌄', lat:36.2564, lng:117.0944, continent:'asia', category:'china', difficulty:2, task:'在玉皇顶迎接第一缕日出', taskEn:'Greet the first sunrise from the Jade Emperor Peak', funFact:'泰山为五岳之首，历代72位皇帝在此封禅', funFactEn:'Mount Tai is chief of Five Sacred Mountains, 72 emperors performed rites here', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:1 },
+
+  // ========== 中国 - 现代地标 ==========
+  { id:'shanghai_bund', name:'上海外滩', nameEn:'The Bund', country:'中国', countryEn:'China', emoji:'🌃', lat:31.2359, lng:121.4920, continent:'asia', category:'china', difficulty:1, task:'在外滩拍一张浦东摩天大楼的天际线', taskEn:'Capture the stunning Pudong skyline from the Bund', funFact:'外滩有"万国建筑博览群"之称，52幢风格各异', funFactEn:'The Bund is a "Gallery of World Architecture" with 52 unique buildings', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'canton_tower', name:'广州塔', nameEn:'Canton Tower', country:'中国', countryEn:'China', emoji:'🗼', lat:23.1065, lng:113.3245, continent:'asia', category:'china', difficulty:1, task:'在"小蛮腰"下仰望600米的高空', taskEn:'Gaze up 600 meters at China\'s "Slim Waist"', funFact:'广州塔高600米，是中国第一高塔', funFactEn:'Canton Tower stands 600m tall, the highest TV tower in China', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:1 },
+  { id:'hongyadong', name:'洪崖洞', nameEn:'Hongya Cave', country:'中国', countryEn:'China', emoji:'🏮', lat:29.5630, lng:106.5831, continent:'asia', category:'china', difficulty:1, task:'在层层叠叠的灯笼下拍一张魔幻夜景', taskEn:'Take a magical photo under cascading red lanterns', funFact:'洪崖洞被称为现实版"千与千寻"汤屋', funFactEn:'Hongya Cave is called the real-life "Spirited Away" bathhouse', startVisible:false, unlockType:'chain', unlockRadius:500, revealRadius:800, chainCount:1 },
 ];
 
 // 成就徽章定义
@@ -2927,41 +2993,51 @@ function getContinentCountForAchieve(state) {
   const explored = new Set(state.exploredLocations || []);
   const continents = new Set();
   explored.forEach(id => {
-    const loc = WORLD_LOCATIONS.find(l => l.id === id);
+    const loc = GLOBAL_LOCATIONS.find(l => l.id === id);
     if (loc) continents.add(loc.continent);
   });
   return continents.size;
 }
 
-const TASK_POOL = [
-  // ---- 极地探索 ----
-  { title: '在北极圈找到今日极光', desc: '旋转地球，找到极光最亮的区域', difficulty: 2 },
-  { title: '追踪一道绿色极光带', desc: '极光在移动！跟随它的轨迹', difficulty: 3 },
-  { title: '观测南极光爆发', desc: '南半球的极光同样惊艳', difficulty: 2 },
-  { title: '在冰岛捕获极光瞬间', desc: '冰与火之地的光之舞', difficulty: 2 },
-  { title: '拍摄极光与星空的合影', desc: '当极光遇上银河', difficulty: 3 },
-  { title: '在格陵兰等待极光降临', desc: '耐心是最好的观测装备', difficulty: 1 },
-  { title: '记录极光的七种颜色', desc: '绿、紫、红、蓝...你看到了几种？', difficulty: 4 },
-  { title: '穿越北极圈', desc: '在地球上标记北极圈的穿越点', difficulty: 1 },
-  { title: '从太空俯瞰极光', desc: '拉远视角，看极光环绕地球的样子', difficulty: 1 },
-  { title: '寻找北极星', desc: '在极夜中找到那颗最亮的指引之星', difficulty: 2 },
-
-  // ---- 地球漫游 ----
-  { title: '探索一个从未去过的国家', desc: '旋转地球，随机停在一个陌生之地', difficulty: 1 },
-  { title: '在赤道上找到三个城市', desc: '沿着地球的腰带走一圈', difficulty: 1 },
-  { title: '定位今天日出的第一个城市', desc: '追着晨光跑', difficulty: 2 },
-  { title: '测量两个大洲之间的距离', desc: '用你的手指丈量地球', difficulty: 1 },
-  { title: '发现一个你知道但没去过的地点', desc: '熟悉又陌生的地方', difficulty: 1 },
-  { title: '找到地球上最孤独的岛屿', desc: '四周只有无尽的海水', difficulty: 3 },
-  { title: '对比南北半球的季节', desc: '一边是夏天，一边是冬天', difficulty: 1 },
-  { title: '穿越本初子午线', desc: '从东半球一步跨到西半球', difficulty: 1 },
-  { title: '在南极找到帝企鹅的栖息地', desc: '地球上最寒冷的家园', difficulty: 3 },
-  { title: '仰望极光许一个愿望', desc: '传说极光下许愿特别灵验', difficulty: 1 },
-  { title: '找到离你最远的城市', desc: '地球另一端是哪里？', difficulty: 1 },
-  { title: '在极昼与极夜的分界线上停留', desc: '一半光明，一半黑暗', difficulty: 2 },
-  { title: '观测一次极光风暴', desc: '当太阳风撞击地球磁场', difficulty: 4 },
-  { title: '收集极光碎片', desc: '每次探索极地区域都会留下一片光', difficulty: 1 },
-  { title: '绘制你的极光地图', desc: '标记你看过的每一道极光', difficulty: 2 },
+// ---- 每日任务池（扩充至 66 个：25 通用 + 41 地点绑定） ----
+const DAILY_TASK_POOL = [
+  // ===== 极地探索（10） =====
+  { id:'daily_01', title:'在北极圈找到今日极光', desc:'旋转地球，找到极光最亮的区域', difficulty:2, category:'aurora' },
+  { id:'daily_02', title:'追踪一道绿色极光带', desc:'极光在移动！跟随它的轨迹', difficulty:3, category:'aurora' },
+  { id:'daily_03', title:'观测南极光爆发', desc:'南半球的极光同样惊艳', difficulty:2, category:'aurora' },
+  { id:'daily_04', title:'在冰岛捕获极光瞬间', desc:'冰与火之地的光之舞', difficulty:2, category:'aurora' },
+  { id:'daily_05', title:'拍摄极光与星空的合影', desc:'当极光遇上银河', difficulty:3, category:'aurora' },
+  { id:'daily_06', title:'在格陵兰等待极光降临', desc:'耐心是最好的观测装备', difficulty:1, category:'aurora' },
+  { id:'daily_07', title:'记录极光的七种颜色', desc:'绿、紫、红、蓝...你看到了几种？', difficulty:4, category:'aurora' },
+  { id:'daily_08', title:'穿越北极圈', desc:'在地球上标记北极圈的穿越点', difficulty:1, category:'aurora' },
+  { id:'daily_09', title:'从太空俯瞰极光', desc:'拉远视角，看极光环绕地球的样子', difficulty:1, category:'aurora' },
+  { id:'daily_10', title:'寻找北极星', desc:'在极夜中找到那颗最亮的指引之星', difficulty:2, category:'aurora' },
+  // ===== 地球漫游（15） =====
+  { id:'daily_11', title:'探索一个从未去过的国家', desc:'旋转地球，随机停在一个陌生之地', difficulty:1, category:'roaming' },
+  { id:'daily_12', title:'在赤道上找到三个城市', desc:'沿着地球的腰带走一圈', difficulty:1, category:'roaming' },
+  { id:'daily_13', title:'定位今天日出的第一个城市', desc:'追着晨光跑', difficulty:2, category:'roaming' },
+  { id:'daily_14', title:'测量两个大洲之间的距离', desc:'用你的手指丈量地球', difficulty:1, category:'roaming' },
+  { id:'daily_15', title:'发现一个你知道但没去过的地点', desc:'熟悉又陌生的地方', difficulty:1, category:'roaming' },
+  { id:'daily_16', title:'找到地球上最孤独的岛屿', desc:'四周只有无尽的海水', difficulty:3, category:'roaming' },
+  { id:'daily_17', title:'对比南北半球的季节', desc:'一边是夏天，一边是冬天', difficulty:1, category:'roaming' },
+  { id:'daily_18', title:'穿越本初子午线', desc:'从东半球一步跨到西半球', difficulty:1, category:'roaming' },
+  { id:'daily_19', title:'在南极找到帝企鹅的栖息地', desc:'地球上最寒冷的家园', difficulty:3, category:'roaming' },
+  { id:'daily_20', title:'仰望极光许一个愿望', desc:'传说极光下许愿特别灵验', difficulty:1, category:'roaming' },
+  { id:'daily_21', title:'找到离你最远的城市', desc:'地球另一端是哪里？', difficulty:1, category:'roaming' },
+  { id:'daily_22', title:'在极昼与极夜的分界线上停留', desc:'一半光明，一半黑暗', difficulty:2, category:'roaming' },
+  { id:'daily_23', title:'观测一次极光风暴', desc:'当太阳风撞击地球磁场', difficulty:4, category:'roaming' },
+  { id:'daily_24', title:'收集极光碎片', desc:'每次探索极地区域都会留下一片光', difficulty:1, category:'roaming' },
+  { id:'daily_25', title:'绘制你的极光地图', desc:'标记你看过的每一道极光', difficulty:2, category:'roaming' },
+  // ===== 地点绑定任务（41 个，由 GLOBAL_LOCATIONS 贡献） =====
+  ...GLOBAL_LOCATIONS.map(loc => ({
+    id: 'loc_' + loc.id,
+    title: loc.name + '·' + loc.task,
+    desc: (loc.funFact || '').slice(0, 30),
+    difficulty: loc.difficulty,
+    category: 'location',
+    locationId: loc.id,
+    continent: loc.continent,
+  })),
 ];
 
 const STORAGE_KEY = 'earth-online-state';
@@ -2970,15 +3046,75 @@ const DEFAULT_STATE = {
   streak: 0,
   totalCompleted: 0,
   lastActiveDate: null,
-  exploredLocations: [],  // ['tokyo', 'paris', ...]
-  exploredChinaLocations: [],  // ['greatwall', 'huangshan', ...]
+  exploredLocations: [],        // 已打卡地点 ID（保留旧字段兼容）
+  exploredChinaLocations: [],   // 已打卡中国地点 ID（保留旧字段兼容）
   lastExploredDate: null,
-  birthDate: null,         // 'YYYY-MM-DD' 用户出生日期
-  lifeWidgetVisible: true,     // 首页是否显示生命日历
-  lifeProgressVisible: true,  // 首页是否显示生命进度条
-  calendarStyle: 'monthly',   // 日历样式: 'monthly' | 'dotmatrix' | 'ring'
-  earthLogs: [],           // [{date, mood, note, type: 'auto'|'manual', timestamp}]
+  birthDate: null,
+  lifeWidgetVisible: true,
+  lifeProgressVisible: true,
+  calendarStyle: 'monthly',
+  earthLogs: [],
+  // === Phase 1 新增：迷雾/解锁系统 ===
+  visibleLocations: ['beijing','tokyo','newyork','paris','sydney'], // 初始可见（新手村）
+  gpsEnabled: false,
+  gpsLat: null,
+  gpsLng: null,
+  lastGPSUpdate: null,
+  unlockQueue: [],              // 待展示的解锁动画 [{id, source, type, timestamp}]
 };
+
+// ---- 旧数据迁移 ----
+function migrateOldData(state) {
+  let changed = false;
+  // 补充 visibleLocations
+  if (!state.visibleLocations || !Array.isArray(state.visibleLocations)) {
+    state.visibleLocations = ['beijing','tokyo','newyork','paris','sydney'];
+    changed = true;
+  }
+  // 将旧 exploredLocations 合并到 visibleLocations
+  if (state.exploredLocations && Array.isArray(state.exploredLocations)) {
+    state.exploredLocations.forEach(id => {
+      if (!state.visibleLocations.includes(id)) {
+        state.visibleLocations.push(id);
+      }
+    });
+  }
+  // 将旧 exploredChinaLocations 合并到 visibleLocations 和 exploredLocations
+  if (state.exploredChinaLocations && Array.isArray(state.exploredChinaLocations)) {
+    state.exploredChinaLocations.forEach(id => {
+      if (!state.exploredLocations.includes(id)) {
+        state.exploredLocations.push(id);
+      }
+      if (!state.visibleLocations.includes(id)) {
+        state.visibleLocations.push(id);
+      }
+    });
+  }
+  // 迁移桌面文件数据（一次性）
+  try {
+    const desktop = JSON.parse(localStorage.getItem('earthonline-checked') || '{}');
+    if (Object.keys(desktop).length > 0) {
+      const MAP = {'loc-1':'tokyo','loc-2':'beijing','loc-3':'bangkok','loc-4':'dubai',
+        'loc-5':'paris','loc-6':'london','loc-7':'rome','loc-8':'moscow',
+        'loc-9':'newyork','loc-10':'rio','loc-11':'mexico','loc-12':'cairo',
+        'loc-13':'capetown','loc-14':'sydney','loc-15':'auckland',
+        'loc-16':'reykjavik','loc-17':'sahara','loc-18':'santiago'};
+      Object.entries(desktop).forEach(([k,v]) => {
+        if (v && MAP[k]) {
+          const lid = MAP[k];
+          if (!state.exploredLocations.includes(lid)) state.exploredLocations.push(lid);
+          if (!state.visibleLocations.includes(lid)) state.visibleLocations.push(lid);
+        }
+      });
+      localStorage.removeItem('earthonline-checked');
+      changed = true;
+    }
+  } catch(e) { /* ignore */ }
+  // 补充新字段默认值
+  if (state.gpsEnabled === undefined) { state.gpsEnabled = false; changed = true; }
+  if (state.unlockQueue === undefined) { state.unlockQueue = []; changed = true; }
+  return changed;
+}
 
 /* ============================================================
    2. 工具函数
@@ -3001,7 +3137,7 @@ function seededRandom(seed) {
 
 function getDailyTaskIndex(seed, offset = 0) {
   const r = seededRandom(seed + offset * 16807);
-  return Math.floor(r * TASK_POOL.length);
+  return Math.floor(r * DAILY_TASK_POOL.length);
 }
 
 function formatDateCN(dateStr) {
@@ -3058,6 +3194,10 @@ function saveState(state) {
 }
 
 let appState = loadState();
+// 执行旧数据迁移
+if (migrateOldData(appState)) {
+  saveState(appState);
+}
 const today = getToday();
 
 // 检查连续打卡：如果上次活跃日期不是昨天也不是今天，重置连续天数
@@ -3135,7 +3275,7 @@ function getCurrentTask() {
   }
 
   return {
-    ...TASK_POOL[taskIndex],
+    ...DAILY_TASK_POOL[taskIndex],
     index: taskIndex,
   };
 }
@@ -3206,7 +3346,7 @@ function renderHistory() {
 
   count.textContent = String(appState.history.length);
   list.innerHTML = appState.history.slice(0, 20).map((h, i) => {
-    const task = TASK_POOL[h.taskIndex] || { title: '未知任务' };
+    const task = DAILY_TASK_POOL[h.taskIndex] || { title: '未知任务' };
     const statusIcon = h.status === 'done' ? '✅' : h.status === 'skipped' ? '❌' : '⏳';
     const statusClass = h.status === 'done' ? 'done' : h.status === 'skipped' ? 'skipped' : 'pending';
     const timeAgo = getRelativeDays(h.date);
@@ -3465,650 +3605,365 @@ function stopConfetti() {
 window.addEventListener('resize', resizeConfettiCanvas);
 
 /* ============================================================
-   8. 2D 世界地图探索系统
+   8. Three.js 3D 粒子地球探索系统
    ============================================================ */
-let mapInitialized = false;
+// ---- 地球状态 ----
+let globeScene, globeCamera, globeRenderer, globeParticles, globeOuterHalo;
+let globeRadius = 5;
+let globeRotY = 0, globeRotX = 0.3;
+let globeVelY = 0, globeVelX = 0;
+let globeAutoRotate = true;
+let globeHoverTimeout = null;
+const TOTAL_PARTICLES = 12500;   // 10000 core + 2500 halo
+const MAX_PARTICLES = 15000;
+const PIXEL_RATIO_CAP = 1.5;
+const INERTIA = 0.94;
 
-// 地图状态
-let mapZoom = 1;
-let mapPanX = 0;
-let mapPanY = 0;
-const MAP_MIN_ZOOM = 1;
-const MAP_MAX_ZOOM = 5;
-
-// ---- China 子地图模式 ----
-let chinaMode = false;
-let chinaModeBackBtn = null;
-const CHINA_BOUNDS = { latMin: 18, latMax: 54, lngMin: 73, lngMax: 135 };
-const CHINA_CENTER = { lat: (18 + 54) / 2, lng: (73 + 135) / 2 };
-
+// ---- 辅助函数 ----
 function getChinaExploredSet() {
-  return new Set(appState.exploredChinaLocations || []);
+  const allExplored = new Set(appState.exploredLocations || []);
+  const chinaIds = GLOBAL_LOCATIONS.filter(l => l.category === 'china').map(l => l.id);
+  return new Set(chinaIds.filter(id => allExplored.has(id)));
 }
 
 const exploreView = document.getElementById('exploreView');
-const mapContainerEl = document.getElementById('mapContainer');
-const mapWrapper = document.getElementById('mapWrapper');
-const mapContent = document.getElementById('mapContent');
-const mapImage = document.getElementById('mapImage');
+const globeContainer = document.getElementById('globeContainer');
 const exploreBackBtn = document.getElementById('exploreBackBtn');
-const popupWrapper = document.getElementById('locationPopupWrapper');
+const bottomSheetOverlay = document.getElementById('bottomSheetOverlay');
 
-// ---- 经纬度 → 像素坐标 (equirectangular) ----
-function latLngToPixel(lat, lng, mapW, mapH) {
-  const x = (lng + 180) / 360 * mapW;
-  const y = (90 - lat) / 180 * mapH;
-  return { x, y };
-}
-
-// ---- 探索辅助 ----
 function getExploredSet() {
   return new Set(appState.exploredLocations || []);
 }
 
-function getContinentCount(exploredIds) {
-  const continents = new Set();
-  exploredIds.forEach(id => {
-    const loc = WORLD_LOCATIONS.find(l => l.id === id);
-    if (loc) continents.add(loc.continent);
+// ---- 经纬度 → 3D 向量 ----
+function latLngToVector3(lat, lng, radius) {
+  const phi = (90 - lat) * Math.PI / 180;
+  const theta = (lng + 180) * Math.PI / 180;
+  return new THREE.Vector3(
+    -radius * Math.sin(phi) * Math.cos(theta),
+    radius * Math.cos(phi),
+    radius * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
+// ---- Haversine 距离 (km) ----
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ---- 软光纹理 (Canvas) ----
+function createGlowTexture() {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  gradient.addColorStop(0, 'rgba(255,255,255,0.9)');
+  gradient.addColorStop(0.15, 'rgba(200,220,255,0.6)');
+  gradient.addColorStop(0.4, 'rgba(100,150,220,0.2)');
+  gradient.addColorStop(0.7, 'rgba(30,50,100,0.04)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// ---- 3D 粒子地球 ----
+function initGlobe() {
+  globeScene = new THREE.Scene();
+  globeCamera = new THREE.PerspectiveCamera(45, globeContainer.clientWidth / globeContainer.clientHeight, 0.1, 50);
+  globeCamera.position.set(0, 0, 14);
+  globeRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
+  globeRenderer.setSize(globeContainer.clientWidth, globeContainer.clientHeight);
+  globeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, PIXEL_RATIO_CAP));
+  globeContainer.appendChild(globeRenderer.domElement);
+  createParticleGlobe();
+  createOuterHalo();
+  setupGlobeInteraction();
+  animateGlobe();
+}
+
+function createParticleGlobe() {
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(TOTAL_PARTICLES * 3);
+  const col = new Float32Array(TOTAL_PARTICLES * 3);
+  const phi = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < TOTAL_PARTICLES; i++) {
+    const y = 1 - (i / (TOTAL_PARTICLES - 1)) * 2;
+    const rAtY = Math.sqrt(1 - y * y);
+    const th = phi * i;
+    const t = i / TOTAL_PARTICLES;
+    let scatter = t < 0.65 ? 0.75+Math.random()*0.30 : t < 0.88 ? 0.80+Math.random()*0.45 : 0.90+Math.random()*0.55;
+    pos[i*3] = Math.cos(th)*rAtY*globeRadius*scatter;
+    pos[i*3+1] = y*globeRadius*scatter;
+    pos[i*3+2] = Math.sin(th)*rAtY*globeRadius*scatter;
+    col[i*3]=0.08; col[i*3+1]=0.12; col[i*3+2]=0.25;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  globeParticles = new THREE.Points(geo, new THREE.PointsMaterial({
+    size:0.06, map:createGlowTexture(), blending:THREE.AdditiveBlending,
+    depthWrite:false, vertexColors:true, transparent:true, opacity:0.85
+  }));
+  globeScene.add(globeParticles);
+  applyVisibilityColors();
+}
+
+function createOuterHalo() {
+  const geo = new THREE.BufferGeometry();
+  const cnt = 2500, pos = new Float32Array(cnt*3);
+  const r = globeRadius * 1.18;
+  for (let i=0; i<cnt; i++) {
+    const phi_a = Math.acos(2*Math.random()-1), theta_a = Math.random()*Math.PI*2;
+    const sc = 0.95+Math.random()*0.30;
+    pos[i*3]=Math.sin(phi_a)*Math.cos(theta_a)*r*sc;
+    pos[i*3+1]=Math.cos(phi_a)*r*sc;
+    pos[i*3+2]=Math.sin(phi_a)*Math.sin(theta_a)*r*sc;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  globeOuterHalo = new THREE.Points(geo, new THREE.PointsMaterial({
+    size:0.09, color:0x334477, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.18
+  }));
+  globeScene.add(globeOuterHalo);
+}
+
+// ---- 可见性 ----
+function computeVisibilityScore(lat, lng) {
+  const vid = appState.visibleLocations || [];
+  if (!vid.length) return 0;
+  let mx = 0;
+  vid.forEach(id => {
+    const l = GLOBAL_LOCATIONS.find(ll => ll.id === id);
+    if (!l) return;
+    const d = haversineKm(lat, lng, l.lat, l.lng);
+    const rad = l.revealRadius || 800;
+    if (d < rad) { const s = Math.exp(-(d*d)/(2*(rad/3)*(rad/3))); if (s > mx) mx = s; }
   });
-  return continents.size;
+  return Math.min(1, mx);
 }
 
-function getFeaturedLocation() {
-  const seed = getDailySeed();
-  const idx = Math.floor(seededRandom(seed * 3) * WORLD_LOCATIONS.length);
-  return WORLD_LOCATIONS[idx];
-}
-
-// ---- 初始化2D世界地图 ----
-function initFlatMap() {
-  mapImage.src = 'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg';
-  mapImage.style.width = '100%';
-  mapImage.style.height = 'auto';
-
-  mapImage.onload = () => {
-    fitMapToContainer();
-    renderFlatMarkers();
-  };
-  if (mapImage.complete && mapImage.naturalWidth > 0) {
-    fitMapToContainer();
-    renderFlatMarkers();
+function applyVisibilityColors() {
+  if (!globeParticles) return;
+  const pos = globeParticles.geometry.attributes.position.array;
+  const col = globeParticles.geometry.attributes.color.array;
+  for (let i=0; i<TOTAL_PARTICLES; i++) {
+    const nx=pos[i*3]/globeRadius, ny=pos[i*3+1]/globeRadius, nz=pos[i*3+2]/globeRadius;
+    const nm = Math.sqrt(nx*nx+ny*ny+nz*nz);
+    const lat = 90-Math.acos(ny/nm)*180/Math.PI;
+    const lng = Math.atan2(nz, nx)*180/Math.PI;
+    const s = computeVisibilityScore(lat, lng);
+    col[i*3]=0.08+s*0.62; col[i*3+1]=0.12+s*0.78; col[i*3+2]=0.25+s*0.75;
   }
-  mapImage.onerror = () => {
-    mapContent.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--color-text-tertiary);font-size:14px;">🌍 地图加载失败</div>';
-  };
+  globeParticles.geometry.attributes.color.needsUpdate = true;
+}
 
-  // 平移事件
-  mapWrapper.addEventListener('pointerdown', onMapPanStart);
-  mapWrapper.addEventListener('pointermove', onMapPanMove);
-  mapWrapper.addEventListener('pointerup', onMapPanEnd);
-  mapWrapper.addEventListener('pointerleave', onMapPanEnd);
-  mapWrapper.addEventListener('pointercancel', onMapPanEnd);
+// ---- 动画循环 ----
+function animateGlobe() {
+  requestAnimationFrame(animateGlobe);
+  if (globeAutoRotate) globeRotY += 0.0008;
+  globeRotY += globeVelY; globeRotX += globeVelX;
+  globeVelY *= INERTIA; globeVelX *= INERTIA;
+  globeRotX = Math.max(-Math.PI/3, Math.min(Math.PI/3, globeRotX));
+  if (globeParticles) { globeParticles.rotation.y=globeRotY; globeParticles.rotation.x=globeRotX; }
+  if (globeOuterHalo) { globeOuterHalo.rotation.y=globeRotY+0.001; globeOuterHalo.rotation.x=globeRotX; }
+  globeRenderer.render(globeScene, globeCamera);
+}
 
-  // 滚轮缩放
-  mapWrapper.addEventListener('wheel', onMapWheel, { passive: false });
-
-  // 触摸捏合缩放
-  mapWrapper.addEventListener('touchstart', onMapTouchStart, { passive: false });
-  mapWrapper.addEventListener('touchmove', onMapTouchMove, { passive: false });
-  mapWrapper.addEventListener('touchend', onMapTouchEnd);
-
-  exploreBackBtn.addEventListener('click', () => {
-    hideExploreView();
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    const homeNav = document.querySelector('.nav-item[data-tab="home"]');
-    if (homeNav) homeNav.classList.add('active');
+// ---- 交互 ----
+function setupGlobeInteraction() {
+  const canvas = globeRenderer.domElement;
+  let isDragging=false, lx=0, ly=0, tLast=0, pinch0=0;
+  canvas.addEventListener('pointerdown', e => { isDragging=true; globeAutoRotate=false; lx=e.clientX; ly=e.clientY; });
+  window.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    globeVelY=(e.clientX-lx)*0.005; globeVelX=(e.clientY-ly)*0.005;
+    lx=e.clientX; ly=e.clientY;
   });
-  document.getElementById('lpCloseBtn').addEventListener('click', hideLocationPopup);
-  popupWrapper.addEventListener('click', (e) => { if (e.target === popupWrapper) hideLocationPopup(); });
-
-  window.addEventListener('resize', onMapResize);
-
-  mapInitialized = true;
-}
-
-function fitMapToContainer() {
-  const cw = mapContainerEl.clientWidth;
-  const ch = mapContainerEl.clientHeight;
-  const iw = mapImage.naturalWidth || 2048;
-  const ih = mapImage.naturalHeight || 1024;
-
-  // 按高度适配，保持 2:1 宽高比
-  const scale = ch / ih;
-  const displayW = iw * scale;
-  const displayH = ch;
-
-  mapImage.style.width = displayW + 'px';
-  mapImage.style.height = displayH + 'px';
-  mapContent.style.width = displayW + 'px';
-  mapContent.style.height = displayH + 'px';
-
-  mapPanX = (cw - displayW) / 2;
-  mapPanY = 0;
-  mapZoom = 1;
-
-  applyMapTransform();
-}
-
-function applyMapTransform() {
-  mapContent.style.transform = `translate(${mapPanX}px, ${mapPanY}px) scale(${mapZoom})`;
-}
-
-// ---- China 子地图模式 ----
-function enterChinaMode() {
-  chinaMode = true;
-  // 保存当前世界地图状态，以便退出时恢复
-  mapContent.dataset.worldPanX = mapPanX;
-  mapContent.dataset.worldPanY = mapPanY;
-  mapContent.dataset.worldZoom = mapZoom;
-
-  const cw = mapContainerEl.clientWidth;
-  const ch = mapContainerEl.clientHeight;
-  const displayW = parseFloat(mapImage.style.width) || cw;
-  const displayH = parseFloat(mapImage.style.height) || ch;
-
-  // 计算 China 在像素空间中的中心和需要的缩放
-  const chinaCx = (CHINA_CENTER.lng + 180) / 360 * displayW;
-  const chinaCy = (90 - CHINA_CENTER.lat) / 180 * displayH;
-  const chinaSpanLng = CHINA_BOUNDS.lngMax - CHINA_BOUNDS.lngMin;  // 62°
-  const chinaSpanLat = CHINA_BOUNDS.latMax - CHINA_BOUNDS.latMin;  // 36°
-  const zoomLng = (cw * 0.88) / (chinaSpanLng / 360 * displayW);
-  const zoomLat = (ch * 0.88) / (chinaSpanLat / 180 * displayH);
-  const targetZoom = Math.min(zoomLng, zoomLat, 7);
-
-  // 动画到 China
-  const startZoom = mapZoom;
-  const startPanX = mapPanX;
-  const startPanY = mapPanY;
-  const targetPanX = cw / 2 - chinaCx * targetZoom;
-  const targetPanY = ch / 2 - chinaCy * targetZoom;
-
-  const startTime = performance.now();
-  const duration = 600;
-  function animStep(now) {
-    const t = Math.min((now - startTime) / duration, 1);
-    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad
-    mapZoom = startZoom + (targetZoom - startZoom) * ease;
-    mapPanX = startPanX + (targetPanX - startPanX) * ease;
-    mapPanY = startPanY + (targetPanY - startPanY) * ease;
-    applyMapTransform();
-    if (t < 1) { requestAnimationFrame(animStep); }
-  }
-  requestAnimationFrame(animStep);
-
-  // 切换回退按钮
-  exploreBackBtn.style.display = 'none';
-  if (!chinaModeBackBtn) {
-    chinaModeBackBtn = document.createElement('button');
-    chinaModeBackBtn.className = 'china-back-btn';
-    chinaModeBackBtn.innerHTML = '← 返回世界';
-    chinaModeBackBtn.addEventListener('click', exitChinaMode);
-    exploreView.appendChild(chinaModeBackBtn);
-  }
-  chinaModeBackBtn.style.display = 'flex';
-
-  // 显示 China 标题
-  let chinaTitle = document.getElementById('chinaTitle');
-  if (!chinaTitle) {
-    chinaTitle = document.createElement('div');
-    chinaTitle.id = 'chinaTitle';
-    chinaTitle.className = 'china-title';
-    exploreView.appendChild(chinaTitle);
-  }
-  chinaTitle.innerHTML = '🇨🇳 中国 <span class="china-title-sub">China</span>';
-  chinaTitle.style.display = 'block';
-
-  // 更新图例
-  updateChinaLegend(true);
-
-  setTimeout(() => renderFlatMarkers(), duration + 50);
-}
-
-function exitChinaMode() {
-  chinaMode = false;
-
-  const startZoom = mapZoom;
-  const startPanX = mapPanX;
-  const startPanY = mapPanY;
-  const targetZoom = parseFloat(mapContent.dataset.worldZoom || 1);
-  const targetPanX = parseFloat(mapContent.dataset.worldPanX || 0);
-  const targetPanY = parseFloat(mapContent.dataset.worldPanY || 0);
-
-  const startTime = performance.now();
-  const duration = 500;
-  function animStep(now) {
-    const t = Math.min((now - startTime) / duration, 1);
-    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-    mapZoom = startZoom + (targetZoom - startZoom) * ease;
-    mapPanX = startPanX + (targetPanX - startPanX) * ease;
-    mapPanY = startPanY + (targetPanY - startPanY) * ease;
-    applyMapTransform();
-    if (t < 1) { requestAnimationFrame(animStep); }
-  }
-  requestAnimationFrame(animStep);
-
-  exploreBackBtn.style.display = '';
-  if (chinaModeBackBtn) chinaModeBackBtn.style.display = 'none';
-  const chinaTitle = document.getElementById('chinaTitle');
-  if (chinaTitle) chinaTitle.style.display = 'none';
-  updateChinaLegend(false);
-
-  setTimeout(() => renderFlatMarkers(), duration + 50);
-}
-
-function updateChinaLegend(china) {
-  const legend = document.querySelector('.explore-legend');
-  if (!legend) return;
-  if (china) {
-    legend.innerHTML = '<span><i class="explore-legend-dot explore-legend-dot--historical"></i> 名胜古迹</span>'
-      + '<span><i class="explore-legend-dot explore-legend-dot--scenic"></i> 自然景观</span>'
-      + '<span><i class="explore-legend-dot explore-legend-dot--mythological"></i> 神话修仙</span>'
-      + '<span><i class="explore-legend-dot explore-legend-dot--visited"></i> 已打卡</span>';
-  } else {
-    legend.innerHTML = '<span><i class="explore-legend-dot explore-legend-dot--unvisited"></i> 未探索</span>'
-      + '<span><i class="explore-legend-dot explore-legend-dot--visited"></i> 已探索</span>'
-      + '<span><i class="explore-legend-dot explore-legend-dot--featured"></i> 今日推荐</span>';
-  }
-}
-
-// ---- 渲染地点标记 ----
-function renderFlatMarkers() {
-  mapContent.querySelectorAll('.map-marker, .map-marker-ring').forEach(el => el.remove());
-
-  const cw = mapContainerEl.clientWidth;
-  const ch = mapContainerEl.clientHeight;
-  const displayW = parseFloat(mapImage.style.width) || cw;
-  const displayH = parseFloat(mapImage.style.height) || ch;
-
-  if (chinaMode) {
-    // ===== China 子地图模式 =====
-    const chinaExploredSet = getChinaExploredSet();
-    const locations = CHINA_LOCATIONS;
-    const featuredIdx = Math.floor(seededRandom(getDailySeed() * 7) * locations.length);
-    const featuredId = locations[featuredIdx]?.id;
-
-    locations.forEach(loc => {
-      const isVisited = chinaExploredSet.has(loc.id);
-      const isFeatured = loc.id === featuredId;
-      const { x, y } = latLngToPixel(loc.lat, loc.lng, displayW, displayH);
-
-      // 类型颜色
-      const typeColors = {
-        historical:  { bg: '#f59e0b', glow: 'rgba(245,158,11,0.7)' },
-        scenic:      { bg: '#34c759', glow: 'rgba(52,199,89,0.6)' },
-        mythological:{ bg: '#a855f7', glow: 'rgba(168,85,247,0.7)' },
-      };
-      const tc = typeColors[loc.type] || typeColors.scenic;
-
-      const marker = document.createElement('div');
-      marker.className = 'map-marker china-marker';
-      if (isVisited) {
-        marker.classList.add('map-marker--visited');
-      } else {
-        marker.classList.add('china-marker--' + loc.type);
-      }
-      if (isFeatured && !isVisited) {
-        marker.classList.add('map-marker--featured');
-      }
-
-      marker.style.left = x + 'px';
-      marker.style.top = y + 'px';
-      if (!isVisited) {
-        marker.style.background = tc.bg;
-        marker.style.boxShadow = '0 0 10px ' + tc.glow;
-      }
-      marker.dataset.locationId = loc.id;
-      marker.dataset.china = '1';
-
-      marker.addEventListener('pointerdown', (e) => { e.stopPropagation(); });
-      marker.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const set = getChinaExploredSet();
-        showChinaLocationPopup(loc, set.has(loc.id));
-      });
-
-      mapContent.appendChild(marker);
-
-      // 已打卡或推荐光环
-      if (isVisited || isFeatured) {
-        const ring = document.createElement('div');
-        ring.className = 'map-marker-ring china-marker-ring';
-        ring.style.left = x + 'px';
-        ring.style.top = y + 'px';
-        ring.style.width = '28px';
-        ring.style.height = '28px';
-        ring.style.borderColor = isFeatured && !isVisited ? '#f59e0b' : (isVisited ? '#34c759' : tc.bg);
-        mapContent.appendChild(ring);
-      }
-    });
-  } else {
-    // ===== 世界地图模式 =====
-    const exploredSet = getExploredSet();
-    const featured = getFeaturedLocation();
-
-    WORLD_LOCATIONS.forEach(loc => {
-      const isVisited = exploredSet.has(loc.id);
-      const isFeatured = loc.id === featured.id;
-      const { x, y } = latLngToPixel(loc.lat, loc.lng, displayW, displayH);
-
-      const marker = document.createElement('div');
-      marker.className = 'map-marker';
-      if (isFeatured) {
-        marker.classList.add('map-marker--featured');
-        if (isVisited) marker.classList.add('map-marker--visited');
-      } else if (isVisited) {
-        marker.classList.add('map-marker--visited');
-      } else {
-        marker.classList.add('map-marker--unvisited');
-      }
-
-      marker.style.left = x + 'px';
-      marker.style.top = y + 'px';
-      marker.dataset.locationId = loc.id;
-
-      marker.addEventListener('pointerdown', (e) => {
-        e.stopPropagation();
-      });
-      marker.addEventListener('click', (e) => {
-        e.stopPropagation();
-        // 北京 → 进入中国子地图
-        if (loc.id === 'beijing') {
-          enterChinaMode();
-          return;
-        }
-        const set = getExploredSet();
-        showLocationPopup(loc, set.has(loc.id));
-      });
-
-      mapContent.appendChild(marker);
-
-      // 已打卡或推荐地点添加光环
-      if (isVisited || isFeatured) {
-        const ring = document.createElement('div');
-        ring.className = 'map-marker-ring';
-        ring.style.left = x + 'px';
-        ring.style.top = y + 'px';
-        ring.style.width = '28px';
-        ring.style.height = '28px';
-        ring.style.borderColor = isFeatured && !isVisited ? '#f59e0b' : '#34c759';
-        mapContent.appendChild(ring);
-      }
-    });
-  }
-}
-
-// ---- 平移交互 ----
-let mapPanning = false;
-let panStartX = 0, panStartY = 0;
-let panOriginX = 0, panOriginY = 0;
-
-function onMapPanStart(e) {
-  if (e.pointerType === 'touch') return;
-  mapPanning = true;
-  mapWrapper.classList.add('panning');
-  panStartX = e.clientX;
-  panStartY = e.clientY;
-  panOriginX = mapPanX;
-  panOriginY = mapPanY;
-  mapWrapper.setPointerCapture(e.pointerId);
-}
-
-function onMapPanMove(e) {
-  if (!mapPanning) return;
-  const dx = e.clientX - panStartX;
-  const dy = e.clientY - panStartY;
-  mapPanX = panOriginX + dx;
-  mapPanY = panOriginY + dy;
-  clampPan();
-  applyMapTransform();
-}
-
-function onMapPanEnd(e) {
-  mapPanning = false;
-  mapWrapper.classList.remove('panning');
-}
-
-// ---- 缩放交互 ----
-function onMapWheel(e) {
-  e.preventDefault();
-  const rect = mapWrapper.getBoundingClientRect();
-  const cx = e.clientX - rect.left;
-  const cy = e.clientY - rect.top;
-
-  const oldZoom = mapZoom;
-  const delta = -e.deltaY * 0.001;
-  mapZoom = Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, mapZoom + delta * mapZoom));
-
-  const scale = mapZoom / oldZoom;
-  mapPanX = cx - scale * (cx - mapPanX);
-  mapPanY = cy - scale * (cy - mapPanY);
-
-  clampPan();
-  applyMapTransform();
-}
-
-// 捏合缩放
-let pinchDist0 = 0;
-let pinchZoom0 = 1;
-let pinchPanX0 = 0, pinchPanY0 = 0;
-let pinchMidX0 = 0, pinchMidY0 = 0;
-
-function onMapTouchStart(e) {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    pinchDist0 = Math.sqrt(dx * dx + dy * dy);
-    pinchZoom0 = mapZoom;
-    pinchPanX0 = mapPanX;
-    pinchPanY0 = mapPanY;
-    pinchMidX0 = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-    pinchMidY0 = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-  } else if (e.touches.length === 1) {
-    mapPanning = true;
-    panStartX = e.touches[0].clientX;
-    panStartY = e.touches[0].clientY;
-    panOriginX = mapPanX;
-    panOriginY = mapPanY;
-  }
-}
-
-function onMapTouchMove(e) {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (pinchDist0 > 0) {
-      const scale = dist / pinchDist0;
-      mapZoom = Math.max(MAP_MIN_ZOOM, Math.min(MAP_MAX_ZOOM, pinchZoom0 * scale));
-
-      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      const rect = mapWrapper.getBoundingClientRect();
-      const cx = midX - rect.left;
-      const cy = midY - rect.top;
-      const cx0 = pinchMidX0 - rect.left;
-      const cy0 = pinchMidY0 - rect.top;
-      const s = mapZoom / pinchZoom0;
-      mapPanX = cx - s * (cx0 - pinchPanX0);
-      mapPanY = cy - s * (cy0 - pinchPanY0);
-      clampPan();
-      applyMapTransform();
+  window.addEventListener('pointerup', e => {
+    isDragging=false;
+    clearTimeout(globeHoverTimeout);
+    globeHoverTimeout = setTimeout(() => { globeAutoRotate=true; }, 2000);
+    if (Math.abs(globeVelY)<0.001 && Math.abs(globeVelX)<0.001) {
+      const n=Date.now(); if (n-tLast<300) return; tLast=n;
+      handleGlobeTap(e);
     }
-  } else if (e.touches.length === 1 && mapPanning) {
-    const dx = e.touches[0].clientX - panStartX;
-    const dy = e.touches[0].clientY - panStartY;
-    mapPanX = panOriginX + dx;
-    mapPanY = panOriginY + dy;
-    clampPan();
-    applyMapTransform();
-  }
-}
-
-function onMapTouchEnd(e) {
-  if (e.touches.length < 2) {
-    pinchDist0 = 0;
-  }
-  if (e.touches.length === 0) {
-    mapPanning = false;
-  }
-}
-
-function clampPan() {
-  const cw = mapContainerEl.clientWidth;
-  const ch = mapContainerEl.clientHeight;
-  const displayW = parseFloat(mapImage.style.width) || cw;
-  const displayH = parseFloat(mapImage.style.height) || ch;
-
-  const scaledW = displayW * mapZoom;
-  const scaledH = displayH * mapZoom;
-
-  const marginX = cw * 0.3;
-  const marginY = ch * 0.3;
-  mapPanX = Math.max(cw - scaledW - marginX, Math.min(marginX, mapPanX));
-  mapPanY = Math.max(ch - scaledH - marginY, Math.min(marginY, mapPanY));
-}
-
-function onMapResize() {
-  fitMapToContainer();
-  renderFlatMarkers();
-}
-
-// ---- 弹窗 ----
-function showLocationPopup(location, isVisited) {
-  document.getElementById('lpEmoji').textContent = location.emoji;
-  document.getElementById('lpName').textContent = location.name;
-  document.getElementById('lpCountry').textContent = location.country;
-  document.getElementById('lpTask').textContent = location.task;
-  document.getElementById('lpFunFact').textContent = '💡 ' + location.funFact;
-
-  const btn = document.getElementById('lpCheckinBtn');
-  const status = document.getElementById('lpCheckinStatus');
-
-  if (isVisited) {
-    btn.textContent = '✅ 已打卡';
-    btn.className = 'lp-checkin-btn lp-checkin-btn--done';
-    btn.disabled = true;
-    status.innerHTML = '<span style="color:#34c759;font-weight:700;">✅ 已探索</span>';
-  } else {
-    btn.textContent = '✨ 打卡签到';
-    btn.className = 'lp-checkin-btn';
-    btn.disabled = false;
-    status.innerHTML = '<span style="color:var(--color-text-tertiary);">📍 等待你的到来</span>';
-  }
-
-  btn.onclick = () => {
-    if (!isVisited) { checkInLocation(location); hideLocationPopup(); }
-  };
-
-  popupWrapper.style.display = 'flex';
-}
-
-function hideLocationPopup() {
-  popupWrapper.style.display = 'none';
-}
-
-// ---- 打卡签到 ----
-function checkInLocation(location) {
-  const exploredSet = getExploredSet();
-  if (exploredSet.has(location.id)) return;
-
-  appState.exploredLocations.push(location.id);
-  appState.lastExploredDate = getToday();
-  saveState(appState);
-
-  renderFlatMarkers();
-  showCheckinToast(location);
-}
-
-// ---- China 地点弹窗（中英双语） ----
-function showChinaLocationPopup(location, isVisited) {
-  document.getElementById('lpEmoji').textContent = location.emoji;
-  document.getElementById('lpName').innerHTML = location.name + ' <span style="font-size:14px;font-weight:400;color:var(--color-text-secondary);">' + location.nameEn + '</span>';
-  document.getElementById('lpCountry').textContent = '🇨🇳 中国 · ' + ({ historical: '名胜古迹', scenic: '自然景观', mythological: '神话修仙' })[location.type] || '';
-  document.getElementById('lpTask').innerHTML = location.task + '<br><span style="font-size:12px;color:var(--color-text-tertiary);">' + location.taskEn + '</span>';
-  document.getElementById('lpFunFact').textContent = '💡 ' + location.funFact + ' | ' + location.funFactEn;
-
-  const btn = document.getElementById('lpCheckinBtn');
-  const status = document.getElementById('lpCheckinStatus');
-
-  if (isVisited) {
-    btn.textContent = '✅ 已打卡';
-    btn.className = 'lp-checkin-btn lp-checkin-btn--done';
-    btn.disabled = true;
-    status.innerHTML = '<span style="color:#34c759;font-weight:700;">✅ 已探索</span>';
-  } else {
-    btn.textContent = '✨ 打卡签到';
-    btn.className = 'lp-checkin-btn';
-    btn.disabled = false;
-    status.innerHTML = '<span style="color:var(--color-text-tertiary);">📍 等待你的到来</span>';
-  }
-
-  btn.onclick = () => {
-    if (!isVisited) { checkInChinaLocation(location); hideLocationPopup(); }
-  };
-
-  popupWrapper.style.display = 'flex';
-}
-
-// ---- China 打卡签到 ----
-function checkInChinaLocation(location) {
-  const chinaSet = getChinaExploredSet();
-  if (chinaSet.has(location.id)) return;
-
-  if (!appState.exploredChinaLocations) appState.exploredChinaLocations = [];
-  appState.exploredChinaLocations.push(location.id);
-  appState.lastExploredDate = getToday();
-  saveState(appState);
-
-  renderFlatMarkers();
-  showCheckinToast(location);
-}
-
-// ---- 打卡提示 ----
-function showCheckinToast(location) {
-  const toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);z-index:3000;background:rgba(30,30,45,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(99,102,241,0.3);border-radius:16px;padding:20px 28px;text-align:center;color:#fff;font-size:15px;font-weight:600;pointer-events:none;';
-  toast.innerHTML = '<div style="font-size:32px;margin-bottom:6px;">' + location.emoji + '</div><div style="font-size:17px;font-weight:700;">📍 ' + location.name + ' 打卡成功！</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;">探索进度 +1</div>';
-  document.body.appendChild(toast);
-
-  requestAnimationFrame(() => {
-    toast.style.transform = 'translate(-50%, -50%) scale(1)';
   });
-
-  setTimeout(() => {
-    toast.style.transform = 'translate(-50%, -50%) scale(0.8)';
-    toast.style.opacity = '0';
-    toast.style.transition = 'all 0.25s ease-in';
-    toast.addEventListener('transitionend', () => toast.remove());
-  }, 1800);
+  canvas.addEventListener('wheel', e => { e.preventDefault(); globeCamera.position.z=Math.max(8,Math.min(22,globeCamera.position.z+e.deltaY*0.01)); }, {passive:false});
+  canvas.addEventListener('touchstart', e => { if(e.touches.length===2) pinch0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); }, {passive:true});
+  canvas.addEventListener('touchmove', e => {
+    if(e.touches.length===2) {
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      globeCamera.position.z=Math.max(8,Math.min(22,globeCamera.position.z*(pinch0/Math.max(d,1))));
+      pinch0=d;
+    }
+  }, {passive:true});
 }
 
-// ---- 显示/隐藏探索视图 ----
-function showExploreView() {
-  exploreView.style.display = 'block';
-  document.body.style.overflow = 'hidden';
-  if (!mapInitialized) {
-    initFlatMap();
+// ---- 点击 → 地点 ----
+function handleGlobeTap(e) {
+  const rc = globeRenderer.domElement.getBoundingClientRect();
+  const mouse = new THREE.Vector2(((e.clientX-rc.left)/rc.width)*2-1, -((e.clientY-rc.top)/rc.height)*2+1);
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, globeCamera);
+  const hits = raycaster.intersectObject(globeParticles);
+  if (!hits.length) return;
+  const pt = hits[0].point, n=pt.length();
+  const lat=90-Math.acos(pt.y/n)*180/Math.PI, lng=Math.atan2(pt.z/n, pt.x/n)*180/Math.PI;
+  let nearest=null, min=Infinity;
+  const vid = appState.visibleLocations || [];
+  GLOBAL_LOCATIONS.forEach(loc => {
+    if (!vid.includes(loc.id)) return;
+    const d=Math.sqrt((lat-loc.lat)**2+(lng-loc.lng)**2);
+    if (d<8 && d<min) { min=d; nearest=loc; }
+  });
+  if (nearest) showBottomSheet(nearest);
+}
+
+// ---- 底部卡片 ----
+let bottomSheetLoc = null;
+
+function showBottomSheet(loc) {
+  bottomSheetLoc = loc;
+  document.getElementById('bsEmoji').textContent = loc.emoji;
+  document.getElementById('bsName').textContent = loc.name + (loc.nameEn ? ' ' + loc.nameEn : '');
+  document.getElementById('bsLocation').textContent = (loc.country || '') + ' · ' + loc.continent;
+  document.getElementById('bsTask').textContent = loc.task;
+  document.getElementById('bsFunFact').textContent = '💡 ' + (loc.funFact || '');
+  const visited = getExploredSet().has(loc.id);
+  const btn = document.getElementById('bsCheckinBtn');
+  const status = document.getElementById('bsStatus');
+  if (visited) {
+    btn.textContent='✅ 已打卡'; btn.style.opacity='0.5'; btn.disabled=true;
+    status.innerHTML='<span style="color:#34c759;font-weight:700;">✅ 已探索</span>';
   } else {
-    fitMapToContainer();
-    renderFlatMarkers();
+    btn.textContent='✨ 打卡签到'; btn.style.opacity='1'; btn.disabled=false;
+    status.innerHTML='<span style="color:var(--color-text-tertiary);">📍 等待你的到来</span>';
   }
+  btn.onclick = () => { if (!getExploredSet().has(loc.id)) { checkInLocation(loc); hideBottomSheet(); } };
+  bottomSheetOverlay.style.display = 'flex';
 }
 
+function hideBottomSheet() { bottomSheetOverlay.style.display='none'; bottomSheetLoc=null; }
+bottomSheetOverlay.addEventListener('click', e => { if (e.target===bottomSheetOverlay) hideBottomSheet(); });
+
+// ---- 打卡 ----
+function checkInLocation(loc) {
+  if (getExploredSet().has(loc.id)) return;
+  appState.exploredLocations.push(loc.id);
+  if (!appState.visibleLocations.includes(loc.id)) appState.visibleLocations.push(loc.id);
+  appState.lastExploredDate = getToday();
+  saveState(appState);
+  applyVisibilityColors();
+  showCheckinToast(loc);
+  // 连锁解锁：同大洲最近 2 个未解锁地点
+  triggerChainUnlock(loc);
+}
+function checkInChinaLocation(loc) { return checkInLocation(loc); }
+
+function triggerChainUnlock(loc) {
+  const cnt = loc.chainCount || 2;
+  if (cnt <= 0) return;
+  const candidates = GLOBAL_LOCATIONS.filter(l =>
+    l.continent === loc.continent && !appState.visibleLocations.includes(l.id) && l.id !== loc.id
+  );
+  candidates.sort((a, b) =>
+    haversineKm(loc.lat, loc.lng, a.lat, a.lng) - haversineKm(loc.lat, loc.lng, b.lat, b.lng)
+  );
+  candidates.slice(0, cnt).forEach((l, i) => {
+    setTimeout(() => {
+      appState.visibleLocations.push(l.id);
+      if (!appState.unlockQueue) appState.unlockQueue = [];
+      appState.unlockQueue.push({ id: l.id, source: loc.id, type: 'chain', timestamp: Date.now() });
+      saveState(appState);
+      applyVisibilityColors();
+    }, i * 400);
+  });
+}
+
+function showCheckinToast(loc) {
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);z-index:3000;background:rgba(30,30,45,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(99,102,241,0.3);border-radius:16px;padding:20px 28px;text-align:center;color:#fff;font-size:15px;font-weight:600;pointer-events:none;transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);';
+  t.innerHTML='<div style="font-size:32px;margin-bottom:6px;">'+loc.emoji+'</div><div style="font-size:17px;font-weight:700;">📍 '+loc.name+' 打卡成功！</div><div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;">探索进度 +1</div>';
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>{t.style.transform='translate(-50%,-50%) scale(1)';});
+  setTimeout(()=>{t.style.transform='translate(-50%,-50%) scale(0)';},2000);
+  setTimeout(()=>t.remove(),2400);
+}
+
+// ---- 视图切换 ----
+function showExploreView() {
+  exploreView.style.display='block'; document.body.style.overflow='hidden';
+  if (!globeScene) { setTimeout(()=>initGlobe(), 100); }
+  else { applyVisibilityColors(); updateGPSCapsule(); }
+  exploreBackBtn.onclick = hideExploreView;
+}
 function hideExploreView() {
-  if (chinaMode) {
-    chinaMode = false;
-    if (chinaModeBackBtn) chinaModeBackBtn.style.display = 'none';
-    const chinaTitle = document.getElementById('chinaTitle');
-    if (chinaTitle) chinaTitle.style.display = 'none';
-    exploreBackBtn.style.display = '';
-    updateChinaLegend(false);
+  exploreView.style.display='none'; document.body.style.overflow=''; hideBottomSheet();
+}
+
+// ---- GPS 胶囊 ----
+function updateGPSCapsule() {
+  const c = document.getElementById('gpsCapsule');
+  if (!appState.gpsEnabled) { c.style.display='none'; return; }
+  const nearby = GLOBAL_LOCATIONS.filter(l => {
+    if (appState.visibleLocations.includes(l.id) || !appState.gpsLat) return false;
+    return haversineKm(appState.gpsLat, appState.gpsLng, l.lat, l.lng) <= 500;
+  });
+  document.getElementById('gpsCapsuleText').textContent = '已定位'+(nearby.length>0?' · 附近'+nearby.length+'个新任务':'');
+  c.style.display='flex';
+}
+
+// ---- GPS 定位系统 ----
+const GPS_UNLOCK_RADIUS = 500;
+
+function showGPSPrimer() {
+  document.getElementById('gpsPrimer').style.display = 'flex';
+  document.getElementById('gpsAllowBtn').onclick = () => {
+    document.getElementById('gpsPrimer').style.display = 'none';
+    navigator.geolocation.getCurrentPosition(onGPSSuccess, onGPSError,
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+  };
+  document.getElementById('gpsDenyBtn').onclick = () => {
+    document.getElementById('gpsPrimer').style.display = 'none';
+  };
+}
+
+function onGPSSuccess(pos) {
+  appState.gpsEnabled = true;
+  appState.gpsLat = pos.coords.latitude;
+  appState.gpsLng = pos.coords.longitude;
+  appState.lastGPSUpdate = Date.now();
+  GLOBAL_LOCATIONS.forEach(loc => {
+    if (!appState.visibleLocations.includes(loc.id)) {
+      if (haversineKm(appState.gpsLat, appState.gpsLng, loc.lat, loc.lng) <= GPS_UNLOCK_RADIUS) {
+        appState.visibleLocations.push(loc.id);
+        if (!appState.unlockQueue) appState.unlockQueue = [];
+        appState.unlockQueue.push({ id: loc.id, type: 'gps', timestamp: Date.now() });
+      }
+    }
+  });
+  saveState(appState);
+  if (globeParticles) applyVisibilityColors();
+  updateGPSCapsule();
+  startGPSWatch();
+}
+
+function onGPSError(err) {
+  console.warn('GPS:', err.message);
+  appState.gpsEnabled = false; saveState(appState);
+}
+
+function startGPSWatch() {
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(onGPSSuccess, onGPSError,
+      { enableHighAccuracy: false, timeout: 30000, maximumAge: 600000 });
   }
-  exploreView.style.display = 'none';
-  document.body.style.overflow = '';
 }
 
 /* ============================================================
@@ -4543,7 +4398,7 @@ function renderContinentStats() {
 
   let html = '';
   continentMeta.forEach(cm => {
-    const locs = WORLD_LOCATIONS.filter(l => l.continent === cm.id);
+    const locs = GLOBAL_LOCATIONS.filter(l => l.continent === cm.id);
     const visited = locs.filter(l => exploredSet.has(l.id)).length;
     const total = locs.length;
     const pct = total > 0 ? Math.round((visited / total) * 100) : 0;
