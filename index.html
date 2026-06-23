@@ -2888,10 +2888,10 @@ import * as THREE from 'three';
 //       task, taskEn, funFact, funFactEn, startVisible, unlockType, unlockRadius, revealRadius, chainCount
 const GLOBAL_LOCATIONS = [
   // ========== 新手村（startVisible: true）==========
-  { id:'beijing', name:'北京', nameEn:'Beijing', country:'中国', countryEn:'China', emoji:'🏯', lat:39.9042, lng:116.4074, continent:'asia', category:'world', difficulty:2, task:'在故宫找到一只石狮子并合影', taskEn:'Find a stone lion in the Forbidden City and take a selfie', funFact:'故宫有超过8700间房间', funFactEn:'The Forbidden City has over 8,700 rooms', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:800, chainCount:3 },
-  { id:'tokyo', name:'东京', nameEn:'Tokyo', country:'日本', countryEn:'Japan', emoji:'🗼', lat:35.6762, lng:139.6503, continent:'asia', category:'world', difficulty:2, task:'在涩谷十字路口准时穿越一次', taskEn:'Cross Shibuya Crossing at the exact moment the light turns green', funFact:'涩谷十字路口每分钟约有3000人通过', funFactEn:'About 3,000 people cross Shibuya Crossing every minute', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:800, chainCount:2 },
-  { id:'newyork', name:'纽约', nameEn:'New York', country:'美国', countryEn:'USA', emoji:'🗽', lat:40.7128, lng:-74.0060, continent:'americas', category:'world', difficulty:1, task:'在中央公园喂一次鸽子', taskEn:'Feed the pigeons in Central Park', funFact:'纽约中央公园面积比摩纳哥公国还大', funFactEn:'Central Park is larger than the entire country of Monaco', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:800, chainCount:2 },
-  { id:'paris', name:'巴黎', nameEn:'Paris', country:'法国', countryEn:'France', emoji:'🗼', lat:48.8566, lng:2.3522, continent:'europe', category:'world', difficulty:1, task:'在埃菲尔铁塔前做一个优雅的姿势', taskEn:'Strike an elegant pose in front of the Eiffel Tower', funFact:'埃菲尔铁塔每年会长高约15厘米（热胀冷缩）', funFactEn:'The Eiffel Tower grows about 15cm every year due to thermal expansion', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:800, chainCount:2 },
+  { id:'beijing', name:'北京', nameEn:'Beijing', country:'中国', countryEn:'China', emoji:'🏯', lat:39.9042, lng:116.4074, continent:'asia', category:'world', difficulty:2, task:'在故宫找到一只石狮子并合影', taskEn:'Find a stone lion in the Forbidden City and take a selfie', funFact:'故宫有超过8700间房间', funFactEn:'The Forbidden City has over 8,700 rooms', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:3000, chainCount:3 },
+  { id:'tokyo', name:'东京', nameEn:'Tokyo', country:'日本', countryEn:'Japan', emoji:'🗼', lat:35.6762, lng:139.6503, continent:'asia', category:'world', difficulty:2, task:'在涩谷十字路口准时穿越一次', taskEn:'Cross Shibuya Crossing at the exact moment the light turns green', funFact:'涩谷十字路口每分钟约有3000人通过', funFactEn:'About 3,000 people cross Shibuya Crossing every minute', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:3000, chainCount:2 },
+  { id:'newyork', name:'纽约', nameEn:'New York', country:'美国', countryEn:'USA', emoji:'🗽', lat:40.7128, lng:-74.0060, continent:'americas', category:'world', difficulty:1, task:'在中央公园喂一次鸽子', taskEn:'Feed the pigeons in Central Park', funFact:'纽约中央公园面积比摩纳哥公国还大', funFactEn:'Central Park is larger than the entire country of Monaco', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:3000, chainCount:2 },
+  { id:'paris', name:'巴黎', nameEn:'Paris', country:'法国', countryEn:'France', emoji:'🗼', lat:48.8566, lng:2.3522, continent:'europe', category:'world', difficulty:1, task:'在埃菲尔铁塔前做一个优雅的姿势', taskEn:'Strike an elegant pose in front of the Eiffel Tower', funFact:'埃菲尔铁塔每年会长高约15厘米（热胀冷缩）', funFactEn:'The Eiffel Tower grows about 15cm every year due to thermal expansion', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:3000, chainCount:2 },
   { id:'sydney', name:'悉尼', nameEn:'Sydney', country:'澳大利亚', countryEn:'Australia', emoji:'🦘', lat:-33.8688, lng:151.2093, continent:'oceania', category:'world', difficulty:2, task:'在歌剧院前跳一支袋鼠舞', taskEn:'Do a kangaroo dance in front of the Opera House', funFact:'悉尼歌剧院的屋顶由超过100万块瓷砖铺成', funFactEn:'The Sydney Opera House roof is covered by over 1 million tiles', startVisible:true, unlockType:'starter', unlockRadius:500, revealRadius:800, chainCount:2 },
 
   // ========== 亚洲 - 世界 ==========
@@ -3068,6 +3068,7 @@ const DEFAULT_STATE = {
   // === Phase 1 新增：迷雾/解锁系统 ===
   visibleLocations: ['beijing','tokyo','newyork','paris','sydney'], // 初始可见（新手村）
   gpsEnabled: false,
+  gpsDenied: false,             // 用户是否拒绝过定位权限
   gpsLat: null,
   gpsLng: null,
   lastGPSUpdate: null,
@@ -3316,7 +3317,29 @@ function acceptTask() {
   }
 
   saveState(appState);
+  // 联动地球：解锁与任务相关的地点
+  setTimeout(() => tryGlobeUnlockFromTask(task), 200);
   return true;
+}
+function tryGlobeUnlockFromTask(task) {
+  let loc = null;
+  // 地点绑定任务 → 解锁对应地点
+  if (task && task.locationId) {
+    loc = GLOBAL_LOCATIONS.find(l => l.id === task.locationId);
+  }
+  // 通用任务 → 随机解锁一个隐藏地点（100%概率，每次打卡必解锁一处）
+  if (!loc) {
+    const hidden = GLOBAL_LOCATIONS.filter(l => !appState.visibleLocations.includes(l.id));
+    if (hidden.length) loc = hidden[Math.floor(Math.random() * hidden.length)];
+  }
+  if (!loc || appState.visibleLocations.includes(loc.id)) return;
+  appState.visibleLocations.push(loc.id);
+  if (!appState.unlockQueue) appState.unlockQueue = [];
+  appState.unlockQueue.push({ id: loc.id, type: 'daily', timestamp: Date.now() });
+  saveState(appState);
+  if (globeParticles) { applyVisibilityColors(); updateLocationMarkerColors(); }
+  // 通知完成弹窗有新地点解锁
+  window._dailyUnlockedLoc = loc;
 }
 
 
@@ -3510,8 +3533,14 @@ function showCompleteModal() {
     '挑战成功！生活因为你的参与变得更加有趣了。',
     '太棒了！你已经比昨天进步了一点点。',
   ];
-  document.getElementById('modalMessage').textContent =
-    messages[Math.floor(Math.random() * messages.length)];
+  let msg = messages[Math.floor(Math.random() * messages.length)];
+  // 如果有新地点解锁，附加提示
+  if (window._dailyUnlockedLoc) {
+    const ul = window._dailyUnlockedLoc;
+    msg += '\n\n🌍 迷雾散去！' + ul.emoji + ' ' + ul.name + '（' + ul.country + '）已解锁，去探索页看看吧！';
+    window._dailyUnlockedLoc = null;
+  }
+  document.getElementById('modalMessage').textContent = msg;
 
   completeModal.hidden = false;
   triggerConfetti();
@@ -3751,6 +3780,43 @@ function createOuterHalo() {
     size:0.09, color:0x334477, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.18
   }));
   globeScene.add(globeOuterHalo);
+  createLocationMarkers();
+}
+
+// ---- 地点标记点（41个光点） ----
+let globeMarkers, globeMarkerData;
+function createLocationMarkers() {
+  const cnt = GLOBAL_LOCATIONS.length;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(cnt * 3);
+  const col = new Float32Array(cnt * 3);
+  const markerR = globeRadius * 1.08;
+  globeMarkerData = GLOBAL_LOCATIONS.map((loc, i) => {
+    const v = latLngToVector3(loc.lat, loc.lng, markerR);
+    pos[i*3] = v.x; pos[i*3+1] = v.y; pos[i*3+2] = v.z;
+    return { id: loc.id, index: i };
+  });
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  globeMarkers = new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 0.28, blending: THREE.AdditiveBlending, depthWrite: false,
+    vertexColors: true, transparent: true, opacity: 0.9
+  }));
+  globeScene.add(globeMarkers);
+  updateLocationMarkerColors();
+}
+function updateLocationMarkerColors() {
+  if (!globeMarkers) return;
+  const col = globeMarkers.geometry.attributes.color.array;
+  const vid = appState.visibleLocations || [];
+  GLOBAL_LOCATIONS.forEach((loc, i) => {
+    if (vid.includes(loc.id)) {
+      col[i*3]=0.2; col[i*3+1]=0.9; col[i*3+2]=1.0;  // 亮青 —— 已探索
+    } else {
+      col[i*3]=0.02; col[i*3+1]=0.02; col[i*3+2]=0.06;  // 几乎不可见，仅一丝暗示
+    }
+  });
+  globeMarkers.geometry.attributes.color.needsUpdate = true;
 }
 
 // ---- 可见性 ----
@@ -3762,8 +3828,8 @@ function computeVisibilityScore(lat, lng) {
     const l = GLOBAL_LOCATIONS.find(ll => ll.id === id);
     if (!l) return;
     const d = haversineKm(lat, lng, l.lat, l.lng);
-    const rad = l.revealRadius || 800;
-    if (d < rad) { const s = Math.exp(-(d*d)/(2*(rad/3)*(rad/3))); if (s > mx) mx = s; }
+    const rad = l.revealRadius || 2500;
+    if (d < rad*1.5) { const s = Math.exp(-(d*d)/(2*rad*rad)); if (s > mx) mx = s; }
   });
   return Math.min(1, mx);
 }
@@ -3781,6 +3847,7 @@ function applyVisibilityColors() {
     col[i*3]=0.08+s*0.62; col[i*3+1]=0.12+s*0.78; col[i*3+2]=0.25+s*0.75;
   }
   globeParticles.geometry.attributes.color.needsUpdate = true;
+  updateLocationMarkerColors();
 }
 
 // ---- 动画循环 ----
@@ -3831,16 +3898,23 @@ function handleGlobeTap(e) {
   const mouse = new THREE.Vector2(((e.clientX-rc.left)/rc.width)*2-1, -((e.clientY-rc.top)/rc.height)*2+1);
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(mouse, globeCamera);
-  const hits = raycaster.intersectObject(globeParticles);
+  // 优先检测标记点（更易点中）
+  raycaster.params.Points.threshold = 0.15;
+  let hits = raycaster.intersectObject(globeMarkers);
+  if (hits.length) {
+    const idx = hits[0].index;
+    const loc = GLOBAL_LOCATIONS[idx];
+    if (loc) { showBottomSheet(loc); return; }
+  }
+  // 回退：检测粒子球
+  hits = raycaster.intersectObject(globeParticles);
   if (!hits.length) return;
   const pt = hits[0].point, n=pt.length();
   const lat=90-Math.acos(pt.y/n)*180/Math.PI, lng=Math.atan2(pt.z/n, pt.x/n)*180/Math.PI;
   let nearest=null, min=Infinity;
-  const vid = appState.visibleLocations || [];
   GLOBAL_LOCATIONS.forEach(loc => {
-    if (!vid.includes(loc.id)) return;
     const d=Math.sqrt((lat-loc.lat)**2+(lng-loc.lng)**2);
-    if (d<8 && d<min) { min=d; nearest=loc; }
+    if (d<12 && d<min) { min=d; nearest=loc; }
   });
   if (nearest) showBottomSheet(nearest);
 }
@@ -3850,23 +3924,43 @@ let bottomSheetLoc = null;
 
 function showBottomSheet(loc) {
   bottomSheetLoc = loc;
-  document.getElementById('bsEmoji').textContent = loc.emoji;
-  document.getElementById('bsName').textContent = loc.name + (loc.nameEn ? ' ' + loc.nameEn : '');
-  document.getElementById('bsLocation').textContent = (loc.country || '') + ' · ' + loc.continent;
-  document.getElementById('bsTask').textContent = loc.task;
-  document.getElementById('bsFunFact').textContent = '💡 ' + (loc.funFact || '');
+  const isVisible = (appState.visibleLocations || []).includes(loc.id);
   const visited = getExploredSet().has(loc.id);
+  if (isVisible) {
+    document.getElementById('bsEmoji').textContent = loc.emoji;
+    document.getElementById('bsName').textContent = loc.name + (loc.nameEn ? ' ' + loc.nameEn : '');
+    document.getElementById('bsLocation').textContent = (loc.country || '') + ' · ' + loc.continent;
+    document.getElementById('bsTask').textContent = loc.task;
+    document.getElementById('bsFunFact').textContent = '💡 ' + (loc.funFact || '');
+  } else {
+    document.getElementById('bsEmoji').textContent = '🌫️';
+    document.getElementById('bsName').textContent = '未探索之地';
+    document.getElementById('bsLocation').textContent = loc.continent + ' · 迷雾笼罩';
+    document.getElementById('bsTask').textContent = '这片区域仍被迷雾笼罩，需要通过GPS定位、完成附近任务或旋转探索来解锁';
+    document.getElementById('bsFunFact').textContent = '🔍 距离最近已探索地点约 ' + Math.round(nearestVisibleDistKm(loc)) + ' km';
+  }
   const btn = document.getElementById('bsCheckinBtn');
   const status = document.getElementById('bsStatus');
   if (visited) {
     btn.textContent='✅ 已打卡'; btn.style.opacity='0.5'; btn.disabled=true;
     status.innerHTML='<span style="color:#34c759;font-weight:700;">✅ 已探索</span>';
+  } else if (!isVisible) {
+    btn.textContent='🔍 迷雾中'; btn.style.opacity='0.4'; btn.disabled=true;
+    status.innerHTML='<span style="color:var(--color-text-tertiary);">🌫️ 尚未解锁此地</span>';
   } else {
     btn.textContent='✨ 打卡签到'; btn.style.opacity='1'; btn.disabled=false;
     status.innerHTML='<span style="color:var(--color-text-tertiary);">📍 等待你的到来</span>';
   }
-  btn.onclick = () => { if (!getExploredSet().has(loc.id)) { checkInLocation(loc); hideBottomSheet(); } };
+  btn.onclick = () => { if (isVisible && !getExploredSet().has(loc.id)) { checkInLocation(loc); hideBottomSheet(); } };
   bottomSheetOverlay.style.display = 'flex';
+}
+function nearestVisibleDistKm(loc) {
+  let min = Infinity;
+  (appState.visibleLocations || []).forEach(id => {
+    const l = GLOBAL_LOCATIONS.find(ll => ll.id === id);
+    if (l) { const d = haversineKm(loc.lat, loc.lng, l.lat, l.lng); if (d < min) min = d; }
+  });
+  return min === Infinity ? 9999 : min;
 }
 
 function hideBottomSheet() { bottomSheetOverlay.style.display='none'; bottomSheetLoc=null; }
@@ -3880,6 +3974,7 @@ function checkInLocation(loc) {
   appState.lastExploredDate = getToday();
   saveState(appState);
   applyVisibilityColors();
+  updateLocationMarkerColors();
   showCheckinToast(loc);
   // 连锁解锁：同大洲最近 2 个未解锁地点
   triggerChainUnlock(loc);
@@ -3902,6 +3997,7 @@ function triggerChainUnlock(loc) {
       appState.unlockQueue.push({ id: l.id, source: loc.id, type: 'chain', timestamp: Date.now() });
       saveState(appState);
       applyVisibilityColors();
+      updateLocationMarkerColors();
     }, i * 400);
   });
 }
@@ -3920,8 +4016,12 @@ function showCheckinToast(loc) {
 function showExploreView() {
   exploreView.style.display='block'; document.body.style.overflow='hidden';
   if (!globeScene) { setTimeout(()=>initGlobe(), 100); }
-  else { applyVisibilityColors(); updateGPSCapsule(); }
+  else { applyVisibilityColors(); updateLocationMarkerColors(); updateGPSCapsule(); }
   exploreBackBtn.onclick = hideExploreView;
+  // 首次进入探索页，弹出 GPS 引导
+  if (!appState.gpsEnabled && !appState.gpsDenied) {
+    setTimeout(() => showGPSPrimer(), 1200);
+  }
 }
 function hideExploreView() {
   exploreView.style.display='none'; document.body.style.overflow=''; hideBottomSheet();
@@ -3969,14 +4069,16 @@ function onGPSSuccess(pos) {
     }
   });
   saveState(appState);
-  if (globeParticles) applyVisibilityColors();
+  if (globeParticles) { applyVisibilityColors(); updateLocationMarkerColors(); }
   updateGPSCapsule();
   startGPSWatch();
 }
 
 function onGPSError(err) {
   console.warn('GPS:', err.message);
-  appState.gpsEnabled = false; saveState(appState);
+  appState.gpsEnabled = false;
+  appState.gpsDenied = true;  // 记住用户拒绝了，不再弹窗
+  saveState(appState);
 }
 
 function startGPSWatch() {
