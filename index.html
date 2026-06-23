@@ -2627,9 +2627,9 @@ button:active {
   <canvas id="globeCanvas" style="display:none;"></canvas>
 
   <!-- GPS 状态胶囊 -->
-  <div id="gpsCapsule" style="position:absolute;top:calc(var(--safe-top) + 60px);left:50%;transform:translateX(-50%);z-index:100;display:none;padding:6px 16px;border-radius:var(--radius-pill);background:rgba(20,20,30,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);font-size:12px;font-weight:600;color:var(--color-accent-glow);border:1px solid rgba(99,102,241,0.2);align-items:center;gap:6px;white-space:nowrap;">
+  <div id="gpsCapsule" style="position:absolute;top:calc(var(--safe-top) + 60px);left:50%;transform:translateX(-50%);z-index:100;padding:8px 18px;border-radius:var(--radius-pill);background:rgba(20,20,30,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);font-size:12px;font-weight:600;color:var(--color-accent-glow);border:1px solid rgba(99,102,241,0.3);align-items:center;gap:6px;white-space:nowrap;cursor:pointer;" onclick="if(!appState.gpsEnabled)showGPSPrimer()">
     <span>📍</span>
-    <span id="gpsCapsuleText">已定位</span>
+    <span id="gpsCapsuleText">开启定位解锁新地点</span>
   </div>
 
   <!-- 返回按钮 -->
@@ -3799,7 +3799,7 @@ function createLocationMarkers() {
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   globeMarkers = new THREE.Points(geo, new THREE.PointsMaterial({
-    size: 0.28, blending: THREE.AdditiveBlending, depthWrite: false,
+    size: 0.28, map: createGlowTexture(), blending: THREE.AdditiveBlending, depthWrite: false,
     vertexColors: true, transparent: true, opacity: 0.9
   }));
   globeScene.add(globeMarkers);
@@ -4016,11 +4016,13 @@ function showCheckinToast(loc) {
 function showExploreView() {
   exploreView.style.display='block'; document.body.style.overflow='hidden';
   if (!globeScene) { setTimeout(()=>initGlobe(), 100); }
-  else { applyVisibilityColors(); updateLocationMarkerColors(); updateGPSCapsule(); }
+  else { applyVisibilityColors(); updateLocationMarkerColors(); }
+  // 总是显示胶囊：GPS未开时是引导按钮，GPS开后显示状态
+  updateGPSCapsule();
   exploreBackBtn.onclick = hideExploreView;
   // 首次进入探索页，弹出 GPS 引导
   if (!appState.gpsEnabled && !appState.gpsDenied) {
-    setTimeout(() => showGPSPrimer(), 1200);
+    setTimeout(() => showGPSPrimer(), 1500);
   }
 }
 function hideExploreView() {
@@ -4030,7 +4032,19 @@ function hideExploreView() {
 // ---- GPS 胶囊 ----
 function updateGPSCapsule() {
   const c = document.getElementById('gpsCapsule');
-  if (!appState.gpsEnabled) { c.style.display='none'; return; }
+  if (!appState.gpsEnabled) {
+    // GPS 未启用：显示引导按钮
+    c.style.display = 'flex';
+    c.style.color = 'var(--color-accent-glow)';
+    c.style.borderColor = 'rgba(99,102,241,0.4)';
+    c.onclick = () => showGPSPrimer();
+    document.getElementById('gpsCapsuleText').textContent = '开启定位解锁新地点';
+    return;
+  }
+  // GPS 已启用：显示状态
+  c.style.color = '#34c759';
+  c.style.borderColor = 'rgba(52,199,89,0.4)';
+  c.onclick = null;
   const nearby = GLOBAL_LOCATIONS.filter(l => {
     if (appState.visibleLocations.includes(l.id) || !appState.gpsLat) return false;
     return haversineKm(appState.gpsLat, appState.gpsLng, l.lat, l.lng) <= 500;
