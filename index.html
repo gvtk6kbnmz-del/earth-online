@@ -3800,7 +3800,7 @@ function createParticleGlobe() {
     pos[i*3] = Math.cos(th)*rAtY*globeRadius*scatter;
     pos[i*3+1] = y*globeRadius*scatter;
     pos[i*3+2] = Math.sin(th)*rAtY*globeRadius*scatter;
-    col[i*3]=0.08; col[i*3+1]=0.12; col[i*3+2]=0.25;
+    col[i*3]=0.015; col[i*3+1]=0.025; col[i*3+2]=0.04;
   }
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
@@ -3892,7 +3892,8 @@ function applyVisibilityColors() {
     const lat = 90-Math.acos(ny/nm)*180/Math.PI;
     const lng = Math.atan2(-nz, nx)*180/Math.PI;
     const s = computeVisibilityScore(lat, lng);
-    col[i*3]=0.08+s*0.62; col[i*3+1]=0.12+s*0.78; col[i*3+2]=0.25+s*0.75;
+    const boosted = Math.pow(s, 0.55);
+    col[i*3]=0.015+boosted*0.735; col[i*3+1]=0.025+boosted*0.925; col[i*3+2]=0.04+boosted*0.96;
   }
   globeParticles.geometry.attributes.color.needsUpdate = true;
   updateLocationMarkerColors();
@@ -3907,6 +3908,7 @@ function animateGlobe() {
   globeRotX = Math.max(-Math.PI/3, Math.min(Math.PI/3, globeRotX));
   if (globeParticles) { globeParticles.rotation.y=globeRotY; globeParticles.rotation.x=globeRotX; }
   if (globeOuterHalo) { globeOuterHalo.rotation.y=globeRotY+0.001; globeOuterHalo.rotation.x=globeRotX; }
+  if (globeMarkers) { globeMarkers.rotation.y=globeRotY; globeMarkers.rotation.x=globeRotX; }
   // 平滑缩放
   const zt = window._zoomGlobeTarget ? window._zoomGlobeTarget() : globeCamera.position.z;
   globeCamera.position.z += (zt - globeCamera.position.z) * 0.25;
