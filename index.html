@@ -1248,6 +1248,11 @@ button:active {
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   display: flex; align-items: flex-end; justify-content: center;
   animation: sheetOverlayIn 0.3s ease;
+  transition: opacity 0.25s ease;
+}
+.bottom-sheet-overlay.closing {
+  opacity: 0;
+  pointer-events: none;
 }
 @keyframes sheetOverlayIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -1260,14 +1265,28 @@ button:active {
   border: 1px solid rgba(255,255,255,0.12); border-bottom: none;
   padding: var(--space-lg); padding-bottom: calc(var(--safe-bottom) + var(--space-lg));
   overflow-y: auto;
-  animation: sheetSlideUp 0.45s cubic-bezier(0.34,1.56,0.64,1);
   position: relative;
+  will-change: transform;
+  transition: transform 0.3s var(--ease-smooth);
+  animation: sheetSlideUp 0.45s cubic-bezier(0.34,1.56,0.64,1);
+}
+.bottom-sheet.dragging {
+  transition: none;
+}
+.bottom-sheet.swiping-down {
+  animation: none;
+  transform: translateY(100%);
+  transition: transform 0.25s ease-in;
 }
 @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
 .bottom-sheet-handle {
   width: 36px; height: 5px; border-radius: 3px;
   background: rgba(255,255,255,0.3); margin: 0 auto var(--space-md);
+  cursor: grab;
+}
+.bottom-sheet-handle:active {
+  background: rgba(255,255,255,0.5);
 }
 
 /* 地点详情弹窗 */
@@ -1405,7 +1424,38 @@ button:active {
   margin-bottom: 0;
 }
 
-/* 打卡成功涟漪 */
+/* ============================================================
+   AirTag 风格解锁波纹（多层同心圆扩散）
+   ============================================================ */
+.airtag-ripple-container {
+  position: fixed;
+  pointer-events: none;
+  z-index: 3000;
+}
+.airtag-ripple-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(99, 102, 241, 0.6);
+  background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  animation: airtagRipple 1.5s ease-out forwards;
+  pointer-events: none;
+}
+.airtag-ripple-ring:nth-child(2) { animation-delay: 0.15s; }
+.airtag-ripple-ring:nth-child(3) { animation-delay: 0.30s; }
+
+@keyframes airtagRipple {
+  0%   { width: 8px; height: 8px; opacity: 1; }
+  100% { width: 140px; height: 140px; opacity: 0; }
+}
+
+/* 连锁解锁波纹（金色） */
+.airtag-ripple-ring.chain-ripple {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%);
+}
+
+/* 打卡成功涟漪（保留兼容） */
 .checkin-ripple {
   position: fixed;
   border-radius: 50%;
@@ -1418,6 +1468,21 @@ button:active {
 @keyframes rippleExpand {
   0% { width: 0; height: 0; opacity: 1; }
   100% { width: 200px; height: 200px; opacity: 0; margin-left: -100px; margin-top: -100px; }
+}
+
+/* 呼吸光晕（新手村标记） */
+@keyframes breathingGlow {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* 探索页渐显 */
+@keyframes globeFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.globe-fade-in {
+  animation: globeFadeIn 1.2s var(--ease-out-expo);
 }
 
 /* ============================================================
@@ -3900,8 +3965,10 @@ function applyVisibilityColors() {
 }
 
 // ---- 动画循环 ----
+let _globeAnimTime = 0;
 function animateGlobe() {
   requestAnimationFrame(animateGlobe);
+  _globeAnimTime += 0.016; // ~60fps 时间累加
   if (globeAutoRotate) globeRotY += 0.0008;
   globeRotY += globeVelY; globeRotX += globeVelX;
   globeVelY *= INERTIA; globeVelX *= INERTIA;
@@ -3909,6 +3976,57 @@ function animateGlobe() {
   if (globeParticles) { globeParticles.rotation.y=globeRotY; globeParticles.rotation.x=globeRotX; }
   if (globeOuterHalo) { globeOuterHalo.rotation.y=globeRotY+0.001; globeOuterHalo.rotation.x=globeRotX; }
   if (globeMarkers) { globeMarkers.rotation.y=globeRotY; globeMarkers.rotation.x=globeRotX; }
+
+  // 呼吸光晕：外层光晕缓慢呼吸
+  if (globeOuterHalo) {
+    const breathe = 0.18 + Math.sin(_globeAnimTime * 0.6) * 0.04;
+    globeOuterHalo.material.opacity = breathe;
+  }
+
+  // 新手村标记呼吸光晕（微弱脉冲）
+  if (globeMarkers && globeMarkers.geometry.attributes.color) {
+    const mcol = globeMarkers.geometry.attributes.color.array;
+    const starterIds = ['beijing', 'tokyo', 'new-york', 'paris', 'sydney'];
+    const vid = appState.visibleLocations || [];
+    const breatheM = 0.6 + Math.sin(_globeAnimTime * 1.2) * 0.2;
+    GLOBAL_LOCATIONS.forEach((loc, i) => {
+      if (starterIds.includes(loc.id) && vid.includes(loc.id)) {
+        mcol[i*3] = 0.2 * breatheM;
+        mcol[i*3+1] = 0.9 * breatheM;
+        mcol[i*3+2] = 1.0 * breatheM;
+      }
+    });
+    globeMarkers.geometry.attributes.color.needsUpdate = true;
+  }
+
+  // 迷雾波动：未探索区域粒子有极慢的亮度波动（「活着的星球」）
+  if (globeParticles && globeParticles.geometry.attributes.color) {
+    const col = globeParticles.geometry.attributes.color.array;
+    const pos = globeParticles.geometry.attributes.position.array;
+    const vid = appState.visibleLocations || [];
+    if (vid.length > 0 && col.length > 0) {
+      const wave = Math.sin(_globeAnimTime * 0.35) * 0.012;
+      // 每帧只更新少量粒子以节省性能（随机采样 5%）
+      const n = Math.min(625, TOTAL_PARTICLES);
+      for (let j = 0; j < n; j++) {
+        const i = Math.floor(Math.random() * TOTAL_PARTICLES);
+        const nx = pos[i*3]/globeRadius, ny = pos[i*3+1]/globeRadius, nz = pos[i*3+2]/globeRadius;
+        const nm = Math.sqrt(nx*nx+ny*ny+nz*nz);
+        const lat = 90-Math.acos(ny/nm)*180/Math.PI;
+        const lng = Math.atan2(-nz, nx)*180/Math.PI;
+        const s = computeVisibilityScore(lat, lng);
+        // 只对低可见度粒子施加波动（迷雾区域）
+        if (s < 0.3) {
+          const boosted = Math.pow(Math.max(0, s + wave), 0.55);
+          col[i*3] = 0.015 + boosted * 0.735;
+          col[i*3+1] = 0.025 + boosted * 0.925;
+          col[i*3+2] = 0.04 + boosted * 0.96;
+        }
+      }
+      globeParticles.geometry.attributes.color.needsUpdate = true;
+    }
+  }
+
   // 平滑缩放
   const zt = window._zoomGlobeTarget ? window._zoomGlobeTarget() : globeCamera.position.z;
   globeCamera.position.z += (zt - globeCamera.position.z) * 0.25;
@@ -3985,6 +4103,10 @@ let bottomSheetLoc = null;
 
 function showBottomSheet(loc) {
   bottomSheetLoc = loc;
+  const sheet = document.getElementById('bottomSheet');
+  sheet.classList.remove('swiping-down', 'dragging');
+  sheet.style.transform = '';
+  bottomSheetOverlay.style.opacity = '';
   const isVisible = (appState.visibleLocations || []).includes(loc.id);
   const visited = getExploredSet().has(loc.id);
   if (isVisible) {
@@ -4014,6 +4136,8 @@ function showBottomSheet(loc) {
   }
   btn.onclick = () => { if (isVisible && !getExploredSet().has(loc.id)) { checkInLocation(loc); hideBottomSheet(); } };
   bottomSheetOverlay.style.display = 'flex';
+  bottomSheetOverlay.classList.remove('closing');
+  sheet.scrollTop = 0;
 }
 function nearestVisibleDistKm(loc) {
   let min = Infinity;
@@ -4024,8 +4148,95 @@ function nearestVisibleDistKm(loc) {
   return min === Infinity ? 9999 : min;
 }
 
-function hideBottomSheet() { bottomSheetOverlay.style.display='none'; bottomSheetLoc=null; }
+function hideBottomSheet() {
+  const overlay = bottomSheetOverlay;
+  if (overlay.classList.contains('closing')) return;
+  overlay.classList.add('closing');
+  const sheet = document.getElementById('bottomSheet');
+  sheet.classList.add('swiping-down');
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    overlay.classList.remove('closing');
+    sheet.classList.remove('swiping-down');
+    bottomSheetLoc = null;
+  }, 280);
+}
 bottomSheetOverlay.addEventListener('click', e => { if (e.target===bottomSheetOverlay) hideBottomSheet(); });
+
+// ---- 底部卡片下滑关闭手势 ----
+(function setupBottomSheetSwipe() {
+  const sheet = document.getElementById('bottomSheet');
+  let startY = 0, startTranslate = 0, dragging = false;
+
+  sheet.addEventListener('touchstart', e => {
+    const touchY = e.touches[0].clientY;
+    startY = touchY;
+    startTranslate = 0;
+    if (sheet.scrollTop <= 0) {
+      dragging = true;
+      sheet.classList.add('dragging');
+    }
+  }, { passive: false });
+
+  sheet.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 0) {
+      e.preventDefault();
+      sheet.style.transform = 'translateY(' + dy + 'px)';
+      startTranslate = dy;
+      const progress = Math.min(1, dy / (window.innerHeight * 0.4));
+      bottomSheetOverlay.style.opacity = 1 - progress * 0.5;
+    }
+  }, { passive: false });
+
+  sheet.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    sheet.classList.remove('dragging');
+    sheet.style.transform = '';
+    bottomSheetOverlay.style.opacity = '';
+    if (startTranslate > 80) {
+      hideBottomSheet();
+    }
+  });
+})();
+
+// ---- AirTag 风格解锁波纹 ----
+function spawnAirTagRipple(screenX, screenY, isChain) {
+  const container = document.createElement('div');
+  container.className = 'airtag-ripple-container';
+  container.style.left = screenX + 'px';
+  container.style.top = screenY + 'px';
+  for (let i = 0; i < 3; i++) {
+    const ring = document.createElement('div');
+    ring.className = 'airtag-ripple-ring' + (isChain ? ' chain-ripple' : '');
+    container.appendChild(ring);
+  }
+  document.body.appendChild(container);
+  setTimeout(() => container.remove(), 1800);
+}
+
+// 获取地点在屏幕上的 2D 坐标
+function getLocationScreenPos(loc) {
+  if (!globeRenderer || !globeCamera) return null;
+  const markerR = globeRadius * 1.08;
+  const v = latLngToVector3(loc.lat, loc.lng, markerR);
+  // 应用旋转
+  const cosY = Math.cos(globeRotY), sinY = Math.sin(globeRotY);
+  const cosX = Math.cos(globeRotX), sinX = Math.sin(globeRotX);
+  const ry = v.x * cosY - v.z * sinY;
+  const rz = v.x * sinY + v.z * cosY;
+  const rx = v.y * cosX + rz * sinX;
+  const rz2 = -v.y * sinX + rz * cosX;
+  const vec = new THREE.Vector3(ry, rx, rz2);
+  vec.project(globeCamera);
+  const rc = globeRenderer.domElement.getBoundingClientRect();
+  return {
+    x: rc.left + (vec.x * 0.5 + 0.5) * rc.width,
+    y: rc.top + (-vec.y * 0.5 + 0.5) * rc.height
+  };
+}
 
 // ---- 打卡 ----
 function checkInLocation(loc) {
@@ -4037,6 +4248,11 @@ function checkInLocation(loc) {
   applyVisibilityColors();
   updateLocationMarkerColors();
   showCheckinToast(loc);
+  // 触感反馈
+  try { navigator.vibrate && navigator.vibrate([10, 50, 10]); } catch(e) {}
+  // AirTag 波纹
+  const sp = getLocationScreenPos(loc);
+  if (sp) spawnAirTagRipple(sp.x, sp.y, false);
   // 连锁解锁：同大洲最近 2 个未解锁地点
   triggerChainUnlock(loc);
 }
@@ -4059,6 +4275,9 @@ function triggerChainUnlock(loc) {
       saveState(appState);
       applyVisibilityColors();
       updateLocationMarkerColors();
+      // 连锁波纹（金色）
+      const sp = getLocationScreenPos(l);
+      if (sp) spawnAirTagRipple(sp.x, sp.y, true);
     }, i * 400);
   });
 }
@@ -4076,6 +4295,13 @@ function showCheckinToast(loc) {
 // ---- 视图切换 ----
 function showExploreView() {
   exploreView.style.display='block'; document.body.style.overflow='hidden';
+  // 渐显动画
+  exploreView.style.opacity = '0';
+  exploreView.style.transition = 'opacity 0.6s var(--ease-out-expo)';
+  requestAnimationFrame(() => {
+    exploreView.style.opacity = '1';
+    setTimeout(() => { exploreView.style.transition = ''; }, 650);
+  });
   if (!globeScene) { setTimeout(()=>initGlobe(), 100); }
   else { applyVisibilityColors(); updateLocationMarkerColors(); }
   // 总是显示胶囊：GPS未开时是引导按钮，GPS开后显示状态
