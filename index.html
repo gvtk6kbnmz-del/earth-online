@@ -3999,32 +3999,22 @@ function animateGlobe() {
     globeMarkers.geometry.attributes.color.needsUpdate = true;
   }
 
-  // 迷雾波动：未探索区域粒子有极慢的亮度波动（「活着的星球」）
+  // 迷雾波动：暗区粒子有极慢的亮度呼吸（「活着的星球」）
+  // 直接读取颜色值，暗粒子（未探索）施加微量波动，无需重新计算可见性
   if (globeParticles && globeParticles.geometry.attributes.color) {
     const col = globeParticles.geometry.attributes.color.array;
-    const pos = globeParticles.geometry.attributes.position.array;
-    const vid = appState.visibleLocations || [];
-    if (vid.length > 0 && col.length > 0) {
-      const wave = Math.sin(_globeAnimTime * 0.35) * 0.012;
-      // 每帧只更新少量粒子以节省性能（随机采样 5%）
-      const n = Math.min(625, TOTAL_PARTICLES);
-      for (let j = 0; j < n; j++) {
-        const i = Math.floor(Math.random() * TOTAL_PARTICLES);
-        const nx = pos[i*3]/globeRadius, ny = pos[i*3+1]/globeRadius, nz = pos[i*3+2]/globeRadius;
-        const nm = Math.sqrt(nx*nx+ny*ny+nz*nz);
-        const lat = 90-Math.acos(ny/nm)*180/Math.PI;
-        const lng = Math.atan2(-nz, nx)*180/Math.PI;
-        const s = computeVisibilityScore(lat, lng);
-        // 只对低可见度粒子施加波动（迷雾区域）
-        if (s < 0.3) {
-          const boosted = Math.pow(Math.max(0, s + wave), 0.55);
-          col[i*3] = 0.015 + boosted * 0.735;
-          col[i*3+1] = 0.025 + boosted * 0.925;
-          col[i*3+2] = 0.04 + boosted * 0.96;
-        }
+    const wave = Math.sin(_globeAnimTime * 0.35) * 0.006;
+    // 每帧采样 200 个粒子（移动端友好）
+    for (let j = 0; j < 200; j++) {
+      const i = Math.floor(Math.random() * TOTAL_PARTICLES);
+      const b = col[i*3+1]; // 绿色通道代表亮度
+      if (b < 0.08) {
+        col[i*3] += wave;
+        col[i*3+1] += wave;
+        col[i*3+2] += wave * 1.3;
       }
-      globeParticles.geometry.attributes.color.needsUpdate = true;
     }
+    globeParticles.geometry.attributes.color.needsUpdate = true;
   }
 
   // 平滑缩放
