@@ -3890,7 +3890,7 @@ function applyVisibilityColors() {
     const nx=pos[i*3]/globeRadius, ny=pos[i*3+1]/globeRadius, nz=pos[i*3+2]/globeRadius;
     const nm = Math.sqrt(nx*nx+ny*ny+nz*nz);
     const lat = 90-Math.acos(ny/nm)*180/Math.PI;
-    const lng = Math.atan2(nz, nx)*180/Math.PI;
+    const lng = Math.atan2(-nz, nx)*180/Math.PI;
     const s = computeVisibilityScore(lat, lng);
     col[i*3]=0.08+s*0.62; col[i*3+1]=0.12+s*0.78; col[i*3+2]=0.25+s*0.75;
   }
